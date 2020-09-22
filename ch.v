@@ -8,21 +8,18 @@ Inductive CB (X : P C) : P C -> Prop :=
   | CB_limit : ∀Y, CB X Y -> CB X (D Y)
   | CB_isect : ∀Y : nat -> P C, (∀n, CB X (Y n)) -> CB X (⋂ Y).
 
+(*
+Induction over CB is called `transfinite' induction because it is not clear how
+a direct induction (e.g. on some derivation structure) can be carried out in
+such a way that K(X) is also reached. It is noteworthy that CB is always at most
+countable, which follows from the fact that X ⧵ K(X) is at most countable. We
+can also prove that CB is well-ordered by the proper superset relation (but this
+proof relies on induction over CB). This could be a future addition in `wot.v'.
+*)
+
 (* Kernel of the Cantor-Bendixon derivative *)
 (* We need a sigma type; [∀Y, CB X Y -> Y α] does not work with negation! *)
 Definition K X α := ∀σ : {Y | CB X Y}, (proj1_sig σ) α.
-
-(*
-Usually induction over CB is called `transfinite' induction because it isn't
-clear if CB is countable. Here we have defined it in such a way that we can use
-the standard constructive induction (which certainly feels suspicious if it
-turned out CB can be uncountable).
-
-But the following question still remains: ``Does there exist a closed X ⊆ C
-such that X ⧵ K(X) cannot be cut down entirely in a countable number of steps?''
-If we can find a counter-example then we have an example of a well-order on a
-transfinite set.
-*)
 
 (*
 Finally we prove CH for closed sets. With closed sets we can exploit a
