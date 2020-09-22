@@ -1,6 +1,6 @@
 (* The Cantor-Schröder-Bernstein theorem *)
 
-From set_theory Require Import lib fn.
+From set_theory Require Import lib fn set.
 
 (* I use full types instead of Ensembles to make the proof more elegant. *)
 Section Aquivalenzsatz.
@@ -14,13 +14,13 @@ Hypothesis g_inj : Injective g.
 
 (* Infinite (ω) reflection of the set Y ⧵ Rng f. *)
 Inductive CSB_Y : nat -> Y -> Prop :=
-  | CSB_Y_0 : ∀y, (∀x, f x <> y) -> CSB_Y 0 y
+  | CSB_Y_0 : ∀y, ¬Rng f y -> CSB_Y 0 y
   | CSB_Y_S : ∀n x, CSB_X n x -> CSB_Y (S n) (f x)
 with CSB_X : nat -> X -> Prop :=
   | CSB_X_n : ∀n y, CSB_Y n y -> CSB_X n (g y).
 
 Lemma CSB_choice x :
-  ∃y, (∃m n, x = g y /\ CSB_Y m y /\ CSB_X n x) \/ (f x = y /\ ∀n, ~CSB_X n x).
+  ∃y, (∃m n, x = g y /\ CSB_Y m y /\ CSB_X n x) \/ (f x = y /\ ∀n, ¬CSB_X n x).
 Proof.
 destruct (classic (∃i, CSB_X i x)) as [[i Hi]|H].
 - inversion_clear Hi. exists y; left; exists i, i. now repeat split.
@@ -30,7 +30,7 @@ Qed.
 Lemma CSB_Y_pred n x :
   CSB_Y n (f x) -> CSB_X (pred n) x.
 Proof.
-intros. inversion H. exfalso; now apply (H0 x).
+intros. inversion H. now apply not_ex_all_not with (n:=x) in H0.
 apply f_inj in H0; now subst.
 Qed.
 
@@ -61,9 +61,9 @@ destruct (choice _ CSB_choice) as [h Hh]; exists h. apply fn_inj_surj_bi.
     exists (g y). destruct (Hh (g y)) as [[_ [_ [Hgy _]]]|[_ Hgy]].
     now apply g_inj in Hgy. exfalso; apply (Hgy i). now apply CSB_X_n. 
   + (* x ∈ (Rng f) ⧵ CSB_Y *)
-    assert(H0 : ~CSB_Y 0 y) by (intros H'; apply H; now exists 0).
-    assert(H1 : ~∀x, f x <> y) by (intros H'; now apply CSB_Y_0 in H').
-    apply not_all_not_ex in H1 as [x Hx]; exists x.
+    assert(Hy : Rng f y). { apply not_all_not_ex; intros H'.
+      apply all_not_not_ex, CSB_Y_0 in H'. apply H; now exists 0. }
+    destruct Hy as [x Hx]; exists x.
     destruct (Hh x) as [[_ [n [_ [_ Hy]]]]|[Hfx _]].
     apply CSB_Y_S in Hy; rewrite Hx in Hy. exfalso; apply H; now exists (S n).
     now rewrite <-Hfx, Hx.

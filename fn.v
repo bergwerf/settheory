@@ -1,12 +1,6 @@
 (* General propositions and properties of functions *)
 
-From set_theory Require Import lib. 
-
-Lemma unfold_compose {X Y Z} {f : X -> Y} {g : Y -> Z} {h : X -> Z} :
-  g ∘ f = h -> ∀x, g (f x) = h x.
-Proof.
-intros. eapply equal_f in H; unfold compose in H. apply H.
-Qed.
+From set_theory Require Import lib.
 
 Section Function_propositions.
 
@@ -23,10 +17,10 @@ Theorem fn_bi_inj_surj :
   Bijective -> Injective /\ Surjective.
 Proof.
 intros [g [H2g H1g]]; split.
-- intros x z Hxz. assert(H' := unfold_compose H2g); unfold id in H'.
+- intros x z Hxz. assert(H' := equal_f H2g); unfold id, compose in H'.
   now rewrite <-H'; rewrite <-H', Hxz at 1.
 - intros y; exists (g y). replace y with (id y) at 2 by easy.
-  now apply unfold_compose.
+  eapply equal_f in H1g; unfold compose in H1g; apply H1g.
 Qed.
 
 (* An injective and surjective function is bijective. *)
@@ -47,3 +41,9 @@ Arguments Bijective {_ _} _.
 
 (* Knuth's up-arrow notation for iterated composition *)
 Notation "f ↑ n" := (iter n f) (at level 60).
+
+Lemma fold_compose {X Y Z} (f : X -> Y) (g : Y -> Z) x : g (f x) = (g ∘ f) x.
+Proof. easy. Qed.
+
+Lemma iter_S_compose {X} (f : X -> X) n : f ↑ (S n) = f ∘ (f ↑ n).
+Proof. easy. Qed.

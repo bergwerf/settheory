@@ -41,18 +41,18 @@ Lemma CB_Closed Y :
   CB X Y -> Closed Y.
 Proof.
 intros H. induction H. easy.
-apply D_Closed. now apply ωisect_Closed.
+apply D_Closed. now apply ωIsect_Closed.
 Qed.
 
 (* We introduce a short notation for a disjoint branch. *)
-Definition CB_disjoint Y α m := CB X Y /\ Empty (Y ∩ Branch m α).
+Definition CB_disjoint Y α m := CB X Y /\ Y ∩ Branch m α = ∅.
 
 (*
 If α ∈ X is not in the kernel, Y ∈ CB(X) exists s.t. α ∉ Y and
 there is a branch of α that is entirely disjoint from Y.
 *)
 Theorem CB_isolated_in_disjoint_branch α :
-  (X ⧵ K X) α -> ∃Y m, ~Y α /\ CB_disjoint Y α m.
+  (X ⧵ K X) α -> ∃Y m, ¬Y α /\ CB_disjoint Y α m.
 Proof.
 intros [H1α H2α]. apply not_all_ex_not in H2α as [[Y HY] H2α]; simpl in *.
 exists Y. assert(Hα := H2α). apply Closed_complement in H2α as [m Hm].

@@ -3,13 +3,13 @@
 From set_theory Require Import lib fn bin set.
 
 (* All non-isolated points: distinct points exist within any branch of α. *)
-Definition D (X : P C) α := ∀m, ∃β, α <> β /\ X β /\ Branch m α β.
+Definition D (X : P C) α := ∀m, ∃β, α ≠ β /\ X β /\ Branch m α β.
 
 (* A closed set contains its own limit points. *)
 Definition Closed X := D X ⊆ X.
 
 (* A countable union of closed sets is closed. *)
-Lemma ωisect_Closed X :
+Lemma ωIsect_Closed X :
   (∀n, Closed (X n)) -> Closed (⋂ X).
 Proof.
 intros H α Hα n. apply H. intros m.
@@ -32,18 +32,23 @@ Qed.
 
 (* An element in the complement of a closed set has a disjoint branch. *)
 Theorem Closed_complement X α :
-  Closed X -> ~X α -> ∃m, Empty (X ∩ Branch m α).
+  Closed X -> ¬X α -> ∃m, X ∩ Branch m α = ∅.
 Proof.
 intros HX Hα. apply not_all_not_ex; intros Hn. apply Hα, HX.
-intros m. destruct (not_Empty _ (Hn m)) as [β [H1β H2β]]; exists β.
+intros m. destruct (not_empty _ (Hn m)) as [β [H1β H2β]]; exists β.
 repeat split. intros H; now subst. all: easy.
 Qed.
 
-(* Shift α ∈ C to the m-th branch (prefix 0^m ++ 1). *)
+(* Shift α ∈ C to the m-th branch of zeros (prefix 0^m ++ 1). *)
 Definition shift_branch m α := shift m (pre 1 ones (shift 1 α)).
 
-(* Copy X ⊆ C at every branch. *)
+(* Copy X ⊆ C at every branch of zeros. *)
 Definition Shifts X α := ∃m β, X β /\ α = shift_branch m β.
+
+Lemma not_Empty_D_Shifts_com X :
+  D X ≠ ∅ -> (D ∘ Shifts) X = (Shifts ∘ D) X.
+Proof.
+Abort.
 
 (*
 For every natural number n, there exists a set X ⊆ C such that {0} is left
@@ -52,9 +57,12 @@ after n applications of D (n times removing isolated points).
 Theorem D_finite_ex n :
   ∃X, (D ↑ n) X = {0}.
 Proof.
-induction n. now exists (singleton zeros). destruct IHn as [X HX].
-exists (Shifts X). apply eq_set in HX as [H1X H2X].
-apply set_eq; unfold singleton; intros α Hα.
+induction n. now exists {0}.
+destruct IHn as [X HX]; exists (Shifts X).
+rewrite (fold_compose Shifts), iter_S_compose.
+(*
+apply eq_incl in HX as [H1X H2X].
+apply incl_eq; unfold Singleton; intros α Hα.
 - (* zeros is a limit point. *)
   subst; simpl; intros m. exists (shift_branch m zeros); repeat split.
   + apply C_neq; exists m. unfold shift_branch, shift, pre.
@@ -68,4 +76,5 @@ apply set_eq; unfold singleton; intros α Hα.
   apply NNPP; intros H. apply C_neq in H as [i Hi].
   unfold zeros in Hi; apply not_eq_sym, not_false_iff_true in Hi.
   simpl in Hα.
+*)
 Abort.

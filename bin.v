@@ -30,21 +30,21 @@ Lemma Branch_restrict m n α β : m <= n -> Branch n α β -> Branch m α β.
 Proof. intros Hle H i Hi. apply H. lia. Qed.
 
 Lemma C_neq (α β : C) :
-  (∃i, α i <> β i) <-> α <> β.
+  (∃i, α i ≠ β i) <-> α ≠ β.
 Proof.
 split. intros [i Hi]. intros H. now subst.
 intros H1. apply not_all_ex_not. intros H2; apply H1.
-now apply functional_extensionality.
+now extensionality i.
 Qed.
 
 Lemma del_zeros m : del m zeros = zeros.
-Proof. now apply functional_extensionality. Qed.
+Proof. now extensionality i. Qed.
 
 Lemma del_ones m : del m ones = ones.
-Proof. now apply functional_extensionality. Qed.
+Proof. now extensionality i. Qed.
 
 Lemma del_pre_neq m α β γ :
-  del m β <> del m γ -> pre m α β <> γ.
+  del m β ≠ del m γ -> pre m α β ≠ γ.
 Proof.
 intros H. apply C_neq in H as [i Hi]. unfold del in Hi.
 apply C_neq. exists (m + i). unfold pre. replace (m + i <? m) with false.
