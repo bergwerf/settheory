@@ -5,6 +5,9 @@ From set_theory Require Import lib fn bin set.
 (* All non-isolated points: distinct points exist within any branch of α. *)
 Definition D (X : P C) α := ∀m, ∃β, α ≠ β /\ X β /\ Branch m α β.
 
+(* Limit of any set transformer. *)
+Definition Lim (F : P C -> P C) X := ⋂ (λ n, (F ↑ n) X).
+
 (* A closed set contains its own limit points. *)
 Definition Closed X := D X ⊆ X.
 
@@ -42,11 +45,21 @@ Qed.
 (* Shift α ∈ C to the m-th branch of zeros (prefix 0^m ++ 1). *)
 Definition shift_branch m α := shift m (pre 1 ones (shift 1 α)).
 
-(* Copy X ⊆ C at every branch of zeros. *)
-Definition Shifts X α := ∃m β, X β /\ α = shift_branch m β.
+(* Copy X ⊆ C at the given branch of zeros. *)
+Definition Shift m X α := ∃β, X β /\ α = shift_branch m β.
 
-Lemma not_Empty_D_Shifts_com X :
-  D X ≠ ∅ -> (D ∘ Shifts) X = (Shifts ∘ D) X.
+(* Copy X ⊆ C at every branch of zeros. *)
+Definition Shifts X := ⋃ λ m, Shift m X.
+
+(* Shifting and removing isolated points commute. *)
+Lemma D_Shift_comm m :
+  D ∘ (Shift m) = (Shift m) ∘ D.
+Proof.
+Abort.
+
+(* α ∈ X iff shift_branch m α ∈ Shifts X. *)
+Lemma shift_branch_Shifts (X : P C) m α :
+  (Shifts X) (shift_branch m α) = X α.
 Proof.
 Abort.
 
@@ -54,27 +67,53 @@ Abort.
 For every natural number n, there exists a set X ⊆ C such that {0} is left
 after n applications of D (n times removing isolated points).
 *)
-Theorem D_finite_ex n :
+Theorem D_n_ex n :
   ∃X, (D ↑ n) X = {0}.
 Proof.
 induction n. now exists {0}.
 destruct IHn as [X HX]; exists (Shifts X).
-rewrite (fold_compose Shifts), iter_S_compose.
-(*
-apply eq_incl in HX as [H1X H2X].
 apply incl_eq; unfold Singleton; intros α Hα.
 - (* zeros is a limit point. *)
-  subst; simpl; intros m. exists (shift_branch m zeros); repeat split.
+  subst; intros m. exists (shift_branch m zeros); repeat split.
   + apply C_neq; exists m. unfold shift_branch, shift, pre.
-    replace (m <? m) with false by b_lia.
+    replace (m <? m) with false by b_lia;
     replace (m - m <? 1) with true by b_lia.
     now unfold zeros, ones.
   + admit.
   + intros i Hi. unfold shift_branch, shift.
     now replace (i <? m) with true by b_lia.
 - (* any other point is not a limit point. *)
-  apply NNPP; intros H. apply C_neq in H as [i Hi].
+  apply NNPP; intros H; apply C_neq in H as [i Hi].
   unfold zeros in Hi; apply not_eq_sym, not_false_iff_true in Hi.
-  simpl in Hα.
+  simpl in Hα; destruct (Hα (S i)) as [β [H1β [H2β H3β]]].
+  (* β cannot exist because all branches of zeros are empty. *)
+Abort.
+
+(* Take the limit of D once. *)
+Theorem Lim_D_ex :
+  ∃X, Lim D X = {0}.
+Proof.
+Abort.
+
+(*
+This one is more difficult to understand. Note that the operation we take the
+limit of, L D, means ``limit of applying D to the input set''. If we call the
+first limit ω, then the outer limit is ω times ω which is sometimes denoted as
+ω squared. It helps to expand the first few terms:
+
+Lim (Lim D) X = (⋂ (D ↑ n) X) ∩ (⋂ (D ↑ n) (⋂ (D ↑ n) X)) ∩ ...
 *)
+Theorem Lim_Lim_D_ex :
+  ∃X, Lim (Lim D) X = {0}.
+Proof.
+Abort.
+
+(*
+Note that Lim (Lim D) = (Lim ↑ 2) D. As with hyper-operations, we can keep
+iterating this principle over and over again. I believe this corresponds to
+ω^ω^ω^... I do not know if this theorem actually holds, but I suspect it does.
+*)
+Theorem Lim_n_D_ex n :
+  ∃X, (Lim ↑ n) D X = {0}.
+Proof.
 Abort.
