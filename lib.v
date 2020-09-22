@@ -20,6 +20,12 @@ Require Export FunctionalExtensionality.
 Export Nat.
 Export Bool.
 
+(*
+To denote indices I prefer using: n, m, i, j, k (in that order). One exception
+is sequences of the type nat -> T where T : Set because I use n and m to denote
+prefixes of such sequences.
+*)
+
 (* Convert boolean arithmetic relations to Prop. *)
 Ltac bool_to_Prop :=
   match goal with
