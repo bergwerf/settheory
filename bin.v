@@ -35,7 +35,7 @@ Lemma Branch_eq m α β :
   Branch m α β -> Branch m α = Branch m β.
 Proof.
 intros; apply incl_eq; intros γ Hγ; eapply Branch_trans.
-apply H. easy. apply Branch_sym, H. easy.
+apply Branch_sym, H. easy. apply H. easy.
 Qed.
 
 Lemma C_neq (α β : C) :

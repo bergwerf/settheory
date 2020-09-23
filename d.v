@@ -11,16 +11,8 @@ Definition Lim (F : P C -> P C) X := ⋂ (λ n, (F ↑ n) X).
 (* A closed set contains its own limit points. *)
 Definition Closed X := D X ⊆ X.
 
-(* A countable union of closed sets is closed. *)
-Lemma ωIsect_Closed X :
-  (∀n, Closed (X n)) -> Closed (⋂ X).
-Proof.
-intros H α Hα n. apply H. intros m.
-destruct (Hα m) as [β Hβ]; now exists β.
-Qed.
-
 (* The derived set is closed. *)
-Theorem D_Closed X :
+Theorem closed_D X :
   Closed (D X).
 Proof.
 (* First find γ ∈ D(X) in the desired branch of α. *)
@@ -33,8 +25,22 @@ assert(m <= n). { apply not_gt. intros H'. now apply Hi in H'. }
 eapply Branch_trans. apply Hi. eapply Branch_restrict. 2: apply Hj. auto.
 Qed.
 
+(* A countable union of closed sets is closed. *)
+Lemma closed_ωisect X :
+  (∀n, Closed (X n)) -> Closed (⋂ X).
+Proof.
+intros H α Hα n. apply H. intros m.
+destruct (Hα m) as [β Hβ]; now exists β.
+Qed.
+
+(* The derived set removes a countable number of isolated points. *)
+Lemma countable_diff_D X :
+  Countable (X ⧵ D X).
+Proof.
+Admitted.
+
 (* An element in the complement of a closed set has a disjoint branch. *)
-Theorem Closed_complement X α :
+Theorem closed_complement X α :
   Closed X -> ¬X α -> ∃m, X ∩ Branch m α = ∅.
 Proof.
 intros HX Hα. apply not_all_not_ex; intros Hn. apply Hα, HX.
@@ -73,20 +79,24 @@ Proof.
 induction n. now exists {0}.
 destruct IHn as [X HX]; exists (Shifts X).
 apply incl_eq; unfold Singleton; intros α Hα.
+- (* α ≠ zeros is not a limit point. *)
+  apply NNPP; intros H; apply C_neq in H as [i Hi].
+  unfold zeros in Hi; apply not_eq_sym, not_false_iff_true in Hi.
+  (* Find β in (D ↑ n) (Shifts X) s.t. Branch (S i) α β. *)
+  simpl in Hα; destruct (Hα (S i)) as [β [H1β [H2β H3β]]].
+  (* Note that for some m : nat, β = shift_branch m zeros. *)
+  (* We cannot find a γ ≠ β in the branch where β splits from zeros. *)
+  admit.
 - (* zeros is a limit point. *)
   subst; intros m. exists (shift_branch m zeros); repeat split.
   + apply C_neq; exists m. unfold shift_branch, shift, pre.
     replace (m <? m) with false by b_lia;
     replace (m - m <? 1) with true by b_lia.
     now unfold zeros, ones.
-  + admit.
+  + (* [shift_branch m zeros] is in (D ↑ n) (Shifts X). *)
+    admit.
   + intros i Hi. unfold shift_branch, shift.
     now replace (i <? m) with true by b_lia.
-- (* any other point is not a limit point. *)
-  apply NNPP; intros H; apply C_neq in H as [i Hi].
-  unfold zeros in Hi; apply not_eq_sym, not_false_iff_true in Hi.
-  simpl in Hα; destruct (Hα (S i)) as [β [H1β [H2β H3β]]].
-  (* β cannot exist because all branches of zeros are empty. *)
 Abort.
 
 (* Take the limit of D once. *)

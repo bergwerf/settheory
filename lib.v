@@ -35,7 +35,8 @@ End Logic.
 (*
 To denote indices I prefer using: n, m, i, j, k (in that order). One exception
 is sequences of the type nat -> T where T : Set because I use n and m to denote
-prefixes of such sequences.
+prefixes of such sequences. I prefer writing function and theorem labels fully
+in small caps, and to start propositions with an uppercase letter.
 *)
 
 (* Convert boolean arithmetic relations to Prop. *)

@@ -34,14 +34,14 @@ Definition CH X := Infinite X ->
   Countable X \/ ∃f : C -> C, Injective f /\ ∀α, X (f α).
 
 Variable X : P C.
-Hypothesis X_Closed : Closed X.
+Hypothesis closed_X : Closed X.
 
 (* All Y ∈ CB(X) are closed. *)
-Lemma CB_Closed Y :
+Lemma CB_closed Y :
   CB X Y -> Closed Y.
 Proof.
 intros H; induction H. easy.
-apply D_Closed. now apply ωIsect_Closed.
+apply closed_D. now apply closed_ωisect.
 Qed.
 
 (* All Y ∈ CB(X) are included in X. *)
@@ -49,8 +49,19 @@ Lemma CB_incl Y :
   CB X Y -> Y ⊆ X.
 Proof.
 intros H; induction H. easy.
-eapply incl_trans. now apply CB_Closed. easy.
+eapply incl_trans. now apply CB_closed. easy.
 intros α Hα. eapply H0, (Hα 0).
+Qed.
+
+(* All Y ∈ CB(X) differ at most a countable number of elements from X. *)
+Theorem CB_countable_complement Y :
+  CB X Y -> Countable (X ⧵ Y).
+Proof.
+intros H; induction H.
+- exists (λ _, zeros); now intros α [H1α H2α].
+- erewrite diff_union. 2: apply CB_closed. apply countable_union.
+  easy. apply countable_diff_D. easy. now apply CB_incl.
+- rewrite diff_ωisect_eq_ωunion_diff; apply countable_ωunion; now intros.
 Qed.
 
 (* We introduce a short notation for a disjoint branch. *)
@@ -65,8 +76,8 @@ Lemma CB_isolated_in_disjoint_branch α :
   (X ⧵ K X) α -> ∃Y m, CB_Disjoint (m, α) Y.
 Proof.
 intros [H1α H2α]. apply not_all_ex_not in H2α as [[Y HY] H2α]; simpl in *;
-exists Y. apply Closed_complement in H2α as [n Hn].
-now exists n. now apply CB_Closed.
+exists Y. apply closed_complement in H2α as [n Hn].
+now exists n. now apply CB_closed.
 Qed.
 
 (*
@@ -83,17 +94,19 @@ intros H; exfalso; now apply HZ.
 Qed.
 
 (* The kernel is a Cantor-Bendixon derivative. *)
-Theorem CB_kernel :
+Theorem CB_K :
   CB X (K X).
 Proof.
 (* Obtain a sequence Y from the previous theorem using AC. We claim K = ⋂ Y. *)
 destruct (choice _ CB_choose_disjoint_at_pre_decode) as [Y HY].
 replace (K X) with (⋂ Y). apply CB_isect; intros; apply (proj1 (HY n)).
 (* Now we must prove K = ⋂ Y. *)
-apply incl_eq.
-- intros α Hα n; assert(HYn := proj1 (HY n)).
+symmetry; apply incl_eq.
+- (* Trivial direction *)
+  intros α Hα n; assert(HYn := proj1 (HY n)).
   now assert(σYn := Hα (exist _ (Y n) HYn)).
-- apply diff_incl with (U:=X); intros α Hα.
+- (* Hard direction; exploit pre_decode_surj and HY. *)
+  apply diff_incl with (U:=X); intros α Hα.
   (* ⋂ Y is included in X. *)
   apply CB_incl with (Y:=Y 0). apply (proj1 (HY 0)). easy.
   (* Obtain a disjoint branch that contains α. *)
@@ -113,10 +126,12 @@ apply incl_eq.
 Qed.
 
 (* The kernel is `perfect': it contains no isolated points. *)
-Theorem K_perfect :
+Corollary CB_K_perfect :
   K X ⊆ D (K X).
 Proof.
-Abort.
+intros α Hα. assert(CB X (D (K X))) by (apply CB_limit, CB_K).
+apply (Hα (exist _ _ H)).
+Qed.
 
 (* Either X embeds into nat, or C embeds into X. *)
 Theorem Closed_Continuum_Hypothesis :

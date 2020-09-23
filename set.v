@@ -1,6 +1,6 @@
 (* Basic notions from set theory *)
 
-From set_theory Require Import lib fn.
+From set_theory Require Import lib fn pair.
 
 Section Definitions.
 
@@ -11,6 +11,7 @@ Definition P := X -> Prop.
 
 Variable V : P.
 Variable W : P.
+Variable Y : nat -> P.
 
 (* A function range. *)
 Definition Rng {D} (f : D -> X) x := ∃d, f d = x.
@@ -30,7 +31,7 @@ Definition Singleton (x y : X) := x = y.
 (* V is a subset of W. *)
 Definition Inclusion := ∀x, V x -> W x.
 
-(* Difference between V and W. *)
+(* The difference of V relative to W is equal to V - W. *)
 Definition Difference x := V x /\ ¬W x.
 
 (* V is a proper superset of W. *)
@@ -43,10 +44,10 @@ Definition Union x := V x \/ W x.
 Definition Isect x := V x /\ W x.
 
 (* Countable union *)
-Definition ωUnion (Y : nat -> P) x := ∃n, Y n x.
+Definition ωUnion x := ∃n, Y n x.
 
 (* Countable intersection *)
-Definition ωIsect (Y : nat -> P) x := ∀n, Y n x.
+Definition ωIsect x := ∀n, Y n x.
 
 End Definitions.
 
@@ -96,7 +97,7 @@ Lemma eq_incl : V = W -> V ⊆ W /\ W ⊆ V.
 Proof. intros; now subst. Qed.
 
 (* Sets that are included in each other are equal. *)
-Lemma incl_eq : V ⊆ W -> W ⊆ V -> W = V.
+Lemma incl_eq : V ⊆ W -> W ⊆ V -> V = W.
 Proof. intros; apply prop_ext; split; auto. Qed.
 
 (* A non-empty set contains an element. *)
@@ -128,17 +129,60 @@ Section Other_lemmas.
 
 Variable X : Type.
 Variable V : P X.
+Variable W : P X.
+Variable U : P X.
+Variable Y : nat -> P X.
+
+(* The difference of V relative to ∅ is all of V. *)
+Lemma diff_empty : V ⧵ ∅ = V.
+Proof. apply incl_eq. now intros α [H _]. easy. Qed.
 
 (*
 Removing only shared elements is equal to
 re-adding elements not removed by others.
 *)
-Lemma diff_ωisect_eq_ωunion_diff Y :
+Lemma diff_ωisect_eq_ωunion_diff :
   V ⧵ ⋂ Y = ⋃ (λ n, V ⧵ Y n).
 Proof.
 apply incl_eq.
-- intros α [n [H1n H2n]]. split. easy. apply ex_not_not_all; now exists n.
 - intros α [H1α H2α]. apply not_all_ex_not in H2α as [n Hn]; now exists n.
+- intros α [n [H1n H2n]]; split. easy. apply ex_not_not_all; now exists n.
+Qed.
+
+(*
+Suppose V is included in W is included in U. Removing all elements in V from U
+is equal to removing all elements in W and adding the elements not in V back.
+*)
+Lemma diff_union :
+  V ⊆ W -> W ⊆ U -> U ⧵ V = (U ⧵ W) ∪ (W ⧵ V).
+Proof.
+intros HV HW; apply incl_eq; intros α.
+- intros [H1α H2α]. destruct (classic (W α)). now right. now left.
+- intros [[H1α H2α]|[H1α H2α]]; split; try easy.
+  eapply contra. apply HV. easy. now apply HW.
+Qed.
+
+(* A union of countable sets is countable. *)
+Lemma countable_union :
+  Countable V -> Countable W -> Countable (V ∪ W).
+Proof.
+intros [v Hv] [w Hw].
+pose(f c m := if c =? 0 then v m else w m).
+pose(g n := let (c, m) := π_inv n in f c m).
+exists g; intros α [Hα|Hα].
+1: destruct (Hv α Hα) as [m Hm]; exists (π (0, m)).
+2: destruct (Hw α Hα) as [m Hm]; exists (π (1, m)).
+all: unfold g, f; now rewrite π_inv_π_id.
+Qed.
+
+(* A countable union of countable sets is countable. *)
+Lemma countable_ωunion :
+  (∀n, Countable (Y n)) -> Countable (⋃ Y).
+Proof.
+intros; apply choice in H as [F HY].
+pose(f n := let (i, m) := π_inv n in F i m).
+exists f; intros α [i Hα]. apply HY in Hα as [m Hm].
+exists (π (i, m)); unfold f; now rewrite π_inv_π_id.
 Qed.
 
 End Other_lemmas.
