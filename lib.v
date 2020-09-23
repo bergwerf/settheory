@@ -20,6 +20,18 @@ Require Export FunctionalExtensionality.
 Export Nat.
 Export Bool.
 
+(* Basic laws of logic that are absent in Coq's library. *)
+Section Logic.
+
+Variable X : Type.
+Variable P : X -> Prop.
+Variable Q : X -> Prop.
+
+Theorem contra x : (P x -> Q x) -> ¬Q x -> ¬P x.
+Proof. auto. Qed.
+
+End Logic.
+
 (*
 To denote indices I prefer using: n, m, i, j, k (in that order). One exception
 is sequences of the type nat -> T where T : Set because I use n and m to denote

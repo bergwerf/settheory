@@ -45,34 +45,46 @@ apply D_Closed. now apply ωIsect_Closed.
 Qed.
 
 (* We introduce a short notation for a disjoint branch. *)
-Definition CB_disjoint Y α m := CB X Y /\ Y ∩ Branch m α = ∅.
+Definition CB_Disjoint (s : nat * C) Y :=
+  CB X Y /\ Y ∩ Branch (fst s) (snd s) = ∅.
 
 (*
 If α ∈ X is not in the kernel, Y ∈ CB(X) exists s.t. α ∉ Y and
 there is a branch of α that is entirely disjoint from Y.
 *)
 Theorem CB_isolated_in_disjoint_branch α :
-  (X ⧵ K X) α -> ∃Y m, ¬Y α /\ CB_disjoint Y α m.
+  (X ⧵ K X) α -> ∃Y m, CB_Disjoint (m, α) Y.
 Proof.
-intros [H1α H2α]. apply not_all_ex_not in H2α as [[Y HY] H2α]; simpl in *.
-exists Y. assert(Hα := H2α). apply Closed_complement in H2α as [m Hm].
-exists m; easy. now apply CB_Closed.
+intros [H1α H2α]. apply not_all_ex_not in H2α as [[Y HY] H2α]; simpl in *;
+exists Y. apply Closed_complement in H2α as [n Hn].
+now exists n. now apply CB_Closed.
 Qed.
 
 (*
-Choose a sequence Y_n from CB(X) that contains a Y_n that is disjoint with every
-branch of the Cantor space, if one exists (otherwise we pick X).
+For every branch s in C as given by pre_decode, there exists a Y ∈ CB(X) such
+that; if CB(X) contains a set disjoint from s, then Y is such a set.
 *)
-Theorem CB_disjoint_at_every_possible_branch :
-  ∃Y, (∀n : nat, CB X (Y n)) /\
-  ∀α m, (∃Z, CB_disjoint Z α m) -> ∃n, CB_disjoint (Y n) α m.
+Theorem CB_choose_disjoint_at_pre_decode n :
+  ∃Y, CB X Y /\
+  ((∃Y', CB_Disjoint (pre_decode n) Y') -> CB_Disjoint (pre_decode n) Y).
 Proof.
-Abort.
+destruct (classic (∃Y', CB_Disjoint (pre_decode n) Y')) as [[Z [H1Z H2Z]]|HZ].
+exists Z; split; easy. exists X; split. apply CB_intro.
+intros H; exfalso; now apply HZ.
+Qed.
 
 (* The kernel is a Cantor-Bendixon derivative. *)
 Theorem CB_kernel :
   CB X (K X).
 Proof.
+(* Obtain a sequence Y from the previous theorem. We claim K = ⋂ Y. *)
+destruct (choice _ CB_choose_disjoint_at_pre_decode) as [Y HY].
+replace (K X) with (⋂ Y). apply CB_isect; intros; apply (proj1 (HY n)).
+(* Now we must prove K = ⋂ Y. *)
+apply incl_eq.
+- intros α Hα n; assert(HYn := proj1 (HY n)).
+  now assert(σYn := Hα (exist _ (Y n) HYn)).
+- apply diff_incl with (U:=X).
 Abort.
 
 (* The kernel is `perfect': it contains no isolated points. *)

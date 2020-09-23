@@ -38,7 +38,7 @@ Theorem Closed_complement X α :
   Closed X -> ¬X α -> ∃m, X ∩ Branch m α = ∅.
 Proof.
 intros HX Hα. apply not_all_not_ex; intros Hn. apply Hα, HX.
-intros m. destruct (not_empty _ (Hn m)) as [β [H1β H2β]]; exists β.
+intros m. destruct (not_empty _ _ (Hn m)) as [β [H1β H2β]]; exists β.
 repeat split. intros H; now subst. all: easy.
 Qed.
 

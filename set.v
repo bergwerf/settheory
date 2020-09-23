@@ -86,6 +86,7 @@ Section Lemmas.
 Variable X : Type.
 Variable V : P X.
 Variable W : P X.
+Variable U : P X.
 
 Lemma incl_refl : V ⊆ V.
 Proof. easy. Qed.
@@ -107,9 +108,17 @@ apply prop_ext; intros; split; unfold EmptySet; intros.
 now apply (H' x). easy.
 Qed.
 
-End Lemmas.
+(*
+If V and W are both included in the same set U, and W removes at least as much
+from U as V, then V is included in W.
+*)
+Lemma diff_incl :
+  V ⊆ U -> W ⊆ U -> U ⧵ W ⊆ U ⧵ V -> V ⊆ W.
+Proof.
+intros HV HW H α Hα. apply HV in Hα as HU.
+apply contra with (x:=α) in H; unfold Difference in *.
+apply not_and_or in H as [H|H]. easy. now apply NNPP.
+now intros [_ HVα].
+Qed.
 
-Arguments incl_refl {_}.
-Arguments eq_incl {_}.
-Arguments incl_eq {_}.
-Arguments not_empty {_}.
+End Lemmas.
