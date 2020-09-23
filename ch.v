@@ -40,8 +40,17 @@ Hypothesis X_Closed : Closed X.
 Lemma CB_Closed Y :
   CB X Y -> Closed Y.
 Proof.
-intros H. induction H. easy.
+intros H; induction H. easy.
 apply D_Closed. now apply ωIsect_Closed.
+Qed.
+
+(* All Y ∈ CB(X) are included in X. *)
+Lemma CB_incl Y :
+  CB X Y -> Y ⊆ X.
+Proof.
+intros H; induction H. easy.
+eapply incl_trans. now apply CB_Closed. easy.
+intros α Hα. eapply H0, (Hα 0).
 Qed.
 
 (* We introduce a short notation for a disjoint branch. *)
@@ -52,7 +61,7 @@ Definition CB_Disjoint (s : nat * C) Y :=
 If α ∈ X is not in the kernel, Y ∈ CB(X) exists s.t. α ∉ Y and
 there is a branch of α that is entirely disjoint from Y.
 *)
-Theorem CB_isolated_in_disjoint_branch α :
+Lemma CB_isolated_in_disjoint_branch α :
   (X ⧵ K X) α -> ∃Y m, CB_Disjoint (m, α) Y.
 Proof.
 intros [H1α H2α]. apply not_all_ex_not in H2α as [[Y HY] H2α]; simpl in *;
@@ -64,7 +73,7 @@ Qed.
 For every branch s in C as given by pre_decode, there exists a Y ∈ CB(X) such
 that; if CB(X) contains a set disjoint from s, then Y is such a set.
 *)
-Theorem CB_choose_disjoint_at_pre_decode n :
+Lemma CB_choose_disjoint_at_pre_decode n :
   ∃Y, CB X Y /\
   ((∃Y', CB_Disjoint (pre_decode n) Y') -> CB_Disjoint (pre_decode n) Y).
 Proof.
@@ -77,15 +86,31 @@ Qed.
 Theorem CB_kernel :
   CB X (K X).
 Proof.
-(* Obtain a sequence Y from the previous theorem. We claim K = ⋂ Y. *)
+(* Obtain a sequence Y from the previous theorem using AC. We claim K = ⋂ Y. *)
 destruct (choice _ CB_choose_disjoint_at_pre_decode) as [Y HY].
 replace (K X) with (⋂ Y). apply CB_isect; intros; apply (proj1 (HY n)).
 (* Now we must prove K = ⋂ Y. *)
 apply incl_eq.
 - intros α Hα n; assert(HYn := proj1 (HY n)).
   now assert(σYn := Hα (exist _ (Y n) HYn)).
-- apply diff_incl with (U:=X).
-Abort.
+- apply diff_incl with (U:=X); intros α Hα.
+  (* ⋂ Y is included in X. *)
+  apply CB_incl with (Y:=Y 0). apply (proj1 (HY 0)). easy.
+  (* Obtain a disjoint branch that contains α. *)
+  assert(HXα := proj1 Hα).
+  apply CB_isolated_in_disjoint_branch in Hα as [Z [m [HZ]]].
+  (* Obtain a number that pre_decode maps to this branch. *)
+  destruct (pre_decode_surj m α) as [n [Hm Hn]]; subst; simpl in *.
+  (* Point out the Y that does not contain α. *)
+  rewrite diff_ωisect_eq_ωunion_diff; exists n. split. easy.
+  (* Use HY to show that Y_n is indeed disjoint from α. *)
+  assert(Hn' : ∃Y', CB_Disjoint (pre_decode n) Y'). { exists Z; split.
+    easy. erewrite Branch_eq. 2: apply Branch_sym, Hn. easy. }
+  apply HY in Hn' as [_ HYn]; apply eq_incl in HYn as [HYn _].
+  (* We use that α ∈ Y n -> α ∈ ∅. *)
+  intros Hα; apply (HYn α); split. easy.
+  now apply Branch_sym.
+Qed.
 
 (* The kernel is `perfect': it contains no isolated points. *)
 Theorem K_perfect :

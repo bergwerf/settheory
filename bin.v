@@ -1,6 +1,6 @@
 (* Utilities for binary sequences (the Cantor space) *)
 
-From set_theory Require Import lib fn.
+From set_theory Require Import lib fn set.
 
 (* Cantor space *)
 Definition C := nat -> bool.
@@ -13,6 +13,8 @@ Definition ones (i : nat) := true.
 Definition pre m (α β : C) i := if i <? m then α i else β i.
 Definition shift m (α : C) i := if i <? m then false else α (i - m).
 Definition del m (α : C) i := α (m + i).
+
+Notation "'{0}'" := (Singleton zeros).
 
 Lemma Branch_refl m α : Branch m α α.
 Proof. easy. Qed.
@@ -28,6 +30,13 @@ Proof. intros i Hi. unfold pre. now apply ltb_lt in Hi; rewrite Hi. Qed.
 
 Lemma Branch_restrict m n α β : m <= n -> Branch n α β -> Branch m α β.
 Proof. intros Hle H i Hi. apply H. lia. Qed.
+
+Lemma Branch_eq m α β :
+  Branch m α β -> Branch m α = Branch m β.
+Proof.
+intros; apply incl_eq; intros γ Hγ; eapply Branch_trans.
+apply H. easy. apply Branch_sym, H. easy.
+Qed.
 
 Lemma C_neq (α β : C) :
   (∃i, α i ≠ β i) <-> α ≠ β.

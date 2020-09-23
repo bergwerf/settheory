@@ -1,6 +1,6 @@
 (* Basic notions from set theory *)
 
-From set_theory Require Import lib fn bin.
+From set_theory Require Import lib fn.
 
 Section Definitions.
 
@@ -64,7 +64,6 @@ Arguments ωUnion {_}.
 Arguments ωIsect {_}.
 
 Notation "'∅'" := (EmptySet).
-Notation "'{0}'" := (Singleton zeros).
 Notation "V ⊆ W" := (Inclusion V W) (at level 50).
 Notation "V ⊃ W" := (ProperSuperset V W) (at level 50).
 Notation "V ⧵ W" := (Difference V W) (at level 40, left associativity).
@@ -81,19 +80,20 @@ split; intros. now subst.
 extensionality x; now apply propositional_extensionality.
 Qed.
 
-Section Lemmas.
+Section Basic_lemmas.
 
 Variable X : Type.
 Variable V : P X.
 Variable W : P X.
 Variable U : P X.
 
-Lemma incl_refl : V ⊆ V.
-Proof. easy. Qed.
+(* Set inclusion is transitive *)
+Lemma incl_trans : U ⊆ V -> V ⊆ W -> U ⊆ W.
+Proof. intros HU HV α; auto. Qed.
 
 (* Equal sets are included in each other. *)
-Lemma eq_incl : W = V -> V ⊆ W /\ W ⊆ V.
-Proof. intros; subst. split; apply incl_refl. Qed.
+Lemma eq_incl : V = W -> V ⊆ W /\ W ⊆ V.
+Proof. intros; now subst. Qed.
 
 (* Sets that are included in each other are equal. *)
 Lemma incl_eq : V ⊆ W -> W ⊆ V -> W = V.
@@ -109,16 +109,36 @@ now apply (H' x). easy.
 Qed.
 
 (*
-If V and W are both included in the same set U, and W removes at least as much
-from U as V, then V is included in W.
+If V is included in U, and W removes at least as much from U as V,
+then V is included in W.
 *)
 Lemma diff_incl :
-  V ⊆ U -> W ⊆ U -> U ⧵ W ⊆ U ⧵ V -> V ⊆ W.
+  V ⊆ U -> U ⧵ W ⊆ U ⧵ V -> V ⊆ W.
 Proof.
-intros HV HW H α Hα. apply HV in Hα as HU.
+intros HV H α Hα. apply HV in Hα as HU.
 apply contra with (x:=α) in H; unfold Difference in *.
 apply not_and_or in H as [H|H]. easy. now apply NNPP.
 now intros [_ HVα].
 Qed.
 
-End Lemmas.
+End Basic_lemmas.
+
+(* Re-use basic lemmas in a non-trivial way. *)
+Section Other_lemmas.
+
+Variable X : Type.
+Variable V : P X.
+
+(*
+Removing only shared elements is equal to
+re-adding elements not removed by others.
+*)
+Lemma diff_ωisect_eq_ωunion_diff Y :
+  V ⧵ ⋂ Y = ⋃ (λ n, V ⧵ Y n).
+Proof.
+apply incl_eq.
+- intros α [n [H1n H2n]]. split. easy. apply ex_not_not_all; now exists n.
+- intros α [H1α H2α]. apply not_all_ex_not in H2α as [n Hn]; now exists n.
+Qed.
+
+End Other_lemmas.
