@@ -30,11 +30,14 @@ similar to the rational numbers which approach all real numbers.)
 *)
 Section Continuum_Hypothesis.
 
-Definition CH X := Infinite X ->
-  Countable X \/ ∃f : C -> C, Injective f /\ ∀α, X (f α).
-
 Variable X : P C.
 Hypothesis closed_X : Closed X.
+
+(* A set Y ⊆ C embeds C if a one-to-one function f : C -> Y exists. *)
+Definition EmbedsC (Y : P C) := ∃f : C -> C, Injective f /\ ∀α, Y (f α).
+
+(* Every infinite set X is either countable or embeds C. *)
+Definition CH := Infinite X -> Countable X \/ EmbedsC X.
 
 (* All Y ∈ CB(X) are closed. *)
 Lemma CB_closed Y :
@@ -125,18 +128,29 @@ symmetry; apply incl_eq.
   now apply Branch_sym.
 Qed.
 
-(* The kernel is `perfect': it contains no isolated points. *)
+(* The kernel contains no isolated points. *)
 Corollary CB_K_perfect :
-  K X ⊆ D (K X).
+  Perfect (K X).
 Proof.
 intros α Hα. assert(CB X (D (K X))) by (apply CB_limit, CB_K).
 apply (Hα (exist _ _ H)).
 Qed.
 
-(* Either X embeds into nat, or C embeds into X. *)
-Theorem Closed_Continuum_Hypothesis :
-  CH X.
+(* C embeds into any non-empty, perfect set. *)
+Lemma nonempty_perfect_embeds_C (Y : P C) :
+  Y ≠ ∅ -> Perfect Y -> EmbedsC Y.
 Proof.
-Abort.
+intros ex H; apply not_empty in ex as [α Hα].
+Admitted.
+
+(* Either X embeds into nat, or C embeds into X. *)
+Theorem Closed_Continuum_Hypothesis : CH.
+Proof.
+destruct (classic (K X = ∅)).
+- left. rewrite <-diff_empty, <-H. apply CB_countable_complement, CB_K.
+- right. apply nonempty_perfect_embeds_C in H as [f [H1f H2f]].
+  exists f; split. easy. intros; eapply CB_incl.
+  apply CB_K. apply H2f. apply CB_K_perfect.
+Qed.
 
 End Continuum_Hypothesis.

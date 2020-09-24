@@ -11,6 +11,9 @@ Definition Lim (F : P C -> P C) X := ⋂ (λ n, (F ↑ n) X).
 (* A closed set contains its own limit points. *)
 Definition Closed X := D X ⊆ X.
 
+(* A perfect set contains exactly its own limit points. *)
+Definition Perfect X := X ⊆ D X.
+
 (* The derived set is closed. *)
 Theorem closed_D X :
   Closed (D X).
