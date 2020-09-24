@@ -33,12 +33,6 @@ intros H α Hα n. apply H. intros m.
 destruct (Hα m) as [β Hβ]; now exists β.
 Qed.
 
-(* The derived set removes a countable number of isolated points. *)
-Lemma countable_diff_D X :
-  Countable (X ⧵ D X).
-Proof.
-Admitted.
-
 (* An element in the complement of a closed set has a disjoint branch. *)
 Theorem closed_complement X α :
   Closed X -> ¬X α -> ∃m, X ∩ Branch m α = ∅.
@@ -46,6 +40,32 @@ Proof.
 intros HX Hα. apply not_all_not_ex; intros Hn. apply Hα, HX.
 intros m. destruct (not_empty _ _ (Hn m)) as [β [H1β H2β]]; exists β.
 repeat split. intros H; now subst. all: easy.
+Qed.
+
+(* The derived set removes a countable number of isolated points. *)
+Lemma countable_diff_D X :
+  Countable (X ⧵ D X).
+Proof.
+(*
+We need AC to choose a sequence from X at every branch of C. If X were defined
+in a constructive manner (using a law that selects prefixes that belong to X),
+then we would not need AC to prove this lemma.
+*)
+pose(P s β := X β /\ Branch (fst s) (snd s) β).
+assert(∀s, ∃α, (∃β, P s β) -> P s α). {
+  intros. destruct (classic (∃β, P s β)) as [[β Hβ]|Hβ].
+  now exists β. now exists zeros. }
+destruct (choice _ H) as [f Hf]. exists (λ n, f (pre_decode n)).
+(* Find m such that α is the only element of Branch m α. *)
+intros α [H1α H2α]. apply not_all_ex_not in H2α as [m Hm].
+destruct (pre_decode_surj m α) as [n [H1n H2n]]; exists n.
+(* This implies P for the image of f. *)
+assert(Hfn : ∃β, P (pre_decode n) β). { exists α; split. easy.
+  rewrite H1n. apply Branch_sym, H2n. }
+apply Hf in Hfn as [H3n H4n]; rewrite H1n in H4n.
+(* If f (pre_decode n) ≠ α, then Hm gives a contradiction. *)
+apply NNPP; intros H5n; apply Hm. exists (f (pre_decode n)); repeat split.
+auto. easy. eapply Branch_trans. apply H2n. easy.
 Qed.
 
 (* Shift α ∈ C to the m-th branch of zeros (prefix 0^m ++ 1). *)
