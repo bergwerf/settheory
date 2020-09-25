@@ -115,7 +115,7 @@ symmetry; apply incl_eq.
   (* Obtain a disjoint branch that contains α. *)
   assert(HXα := proj1 Hα).
   apply CB_isolated_in_disjoint_branch in Hα as [Z [m [HZ]]].
-  (* Obtain a number that pre_decode maps to this branch. *)
+  (* Obtain a number that is mapped to this branch by pre_decode. *)
   destruct (pre_decode_surj m α) as [n [Hm Hn]]; subst; simpl in *.
   (* Point out the Y that does not contain α. *)
   rewrite diff_ωisect_eq_ωunion_diff; exists n. split. easy.
@@ -123,7 +123,7 @@ symmetry; apply incl_eq.
   assert(Hn' : ∃Y', CB_Disjoint (pre_decode n) Y'). { exists Z; split.
     easy. erewrite Branch_eq. 2: apply Branch_sym, Hn. easy. }
   apply HY in Hn' as [_ HYn]; apply eq_incl in HYn as [HYn _].
-  (* We use that α ∈ Y n -> α ∈ ∅. *)
+  (* We use that α ∈ Y n implies α ∈ ∅. *)
   intros Hα; apply (HYn α); split. easy.
   now apply Branch_sym.
 Qed.
@@ -143,7 +143,7 @@ Proof.
 intros ex H; apply not_empty in ex as [α Hα].
 Admitted.
 
-(* Either X embeds into nat, or C embeds into X. *)
+(* Either X is countable or C embeds into X. *)
 Theorem Closed_Continuum_Hypothesis : CH.
 Proof.
 destruct (classic (K X = ∅)).
