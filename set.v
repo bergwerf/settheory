@@ -116,9 +116,9 @@ then V is included in W.
 Lemma diff_incl :
   V ⊆ U -> U ⧵ W ⊆ U ⧵ V -> V ⊆ W.
 Proof.
-intros HV H α Hα. apply HV in Hα as HU.
-apply contra with (x:=α) in H; unfold Difference in *.
-apply not_and_or in H as [H|H]. easy. now apply NNPP.
+intros HVU H α HV. apply HVU in HV as HU.
+assert(Hα := H α). eapply contra in Hα; unfold Difference in *.
+apply not_and_or in Hα as [Hα|Hα]. easy. now apply NNPP.
 now intros [_ HVα].
 Qed.
 

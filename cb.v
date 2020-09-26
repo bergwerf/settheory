@@ -26,7 +26,7 @@ countable, which follows from the fact that X ⧵ K(X) is at most countable.
 Definition K α := ∀σ : {Y | CB Y}, (proj1_sig σ) α.
 
 (* All Y ∈ CB(X) are closed. *)
-Lemma CB_closed Y :
+Theorem CB_closed Y :
   CB Y -> Closed Y.
 Proof.
 intros H; induction H. easy.
@@ -34,7 +34,7 @@ apply closed_D. now apply closed_ωisect.
 Qed.
 
 (* All Y ∈ CB(X) are included in X. *)
-Lemma CB_incl Y :
+Theorem CB_incl Y :
   CB Y -> Y ⊆ X.
 Proof.
 intros H; induction H. easy.

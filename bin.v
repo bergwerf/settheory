@@ -60,6 +60,19 @@ apply C_neq. exists (m + i). unfold pre. replace (m + i <? m) with false.
 easy. symmetry. b_lia.
 Qed.
 
+(* Find the least shared branch of two different sequences. *)
+Lemma neq_least_shared_branch α β :
+  α ≠ β -> ∃m, Branch m α β /\ α m ≠ β m.
+Proof.
+intros H; apply C_neq in H as [i Hi].
+revert Hi; revert α β; induction i; intros. now exists 0.
+destruct (IHi (del 1 α) (del 1 β)) as [m [H1m H2m]]. easy.
+destruct (bool_dec (α 0) (β 0)).
+- exists (S m); split. intros j Hj; destruct j. easy.
+  apply succ_lt_mono in Hj; now apply H1m in Hj. easy.
+- now exists 0.
+Qed.
+
 (* A surjective enumeration of all branches in C using BinPos. *)
 Require Import BinPos Pnat.
 Section Enumerate_branches.

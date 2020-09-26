@@ -23,12 +23,14 @@ Export Bool.
 (* Basic laws of logic that are absent in Coq's library. *)
 Section Logic.
 
-Variable X : Type.
-Variable P : X -> Prop.
-Variable Q : X -> Prop.
+Variable P : Prop.
+Variable Q : Prop.
 
-Theorem contra x : (P x -> Q x) -> ¬Q x -> ¬P x.
+Theorem contra : (P -> Q) -> ¬Q -> ¬P.
 Proof. auto. Qed.
+
+Theorem classic_contra : (¬Q -> ¬P) -> P -> Q.
+Proof. intros; destruct (classic Q). easy. now apply H in H1. Qed.
 
 End Logic.
 

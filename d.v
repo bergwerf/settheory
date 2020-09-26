@@ -29,7 +29,7 @@ eapply Branch_trans. apply Hi. eapply Branch_restrict. 2: apply Hj. auto.
 Qed.
 
 (* A countable union of closed sets is closed. *)
-Lemma closed_ωisect X :
+Theorem closed_ωisect X :
   (∀n, Closed (X n)) -> Closed (⋂ X).
 Proof.
 intros H α Hα n. apply H. intros m.
@@ -46,7 +46,7 @@ repeat split. intros H; now subst. all: easy.
 Qed.
 
 (* The derived set removes a countable number of isolated points. *)
-Lemma countable_diff_D X :
+Theorem countable_diff_D X :
   Countable (X ⧵ D X).
 Proof.
 (*
