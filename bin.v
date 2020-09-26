@@ -93,16 +93,9 @@ Definition pre_size p := pred (Pos.size_nat p).
 Definition pre_bit p i := if i <? pre_size p
   then Pos.testbit_nat p i else false.
 
-(*
-Decode a natural number as a branch in the Cantor space.
-This is not completely injective because (0, zeros) is repeated, but we will
-not need injectivity later and this simplifies the surjectivity proof.
-*)
+(* Decode a natural number as a branch in the Cantor space. *)
 Definition pre_decode (n : nat) : nat * C :=
-  match n with
-  | 0   => (0, zeros)
-  | S m => let p := Pos.of_nat (S m) in (pre_size p, pre_bit p)
-  end.
+  let p := Pos.of_nat (S n) in (pre_size p, pre_bit p).
 
 Lemma pre_size_xO p : pre_size (xO p) = S (pre_size p).
 Proof. unfold pre_size; now destruct p. Qed.
@@ -118,13 +111,6 @@ Lemma pre_size_S p n :
 Proof.
 unfold pre_size; destruct p; simpl; intros.
 1-2: now apply eq_add_S. lia.
-Qed.
-
-Lemma pre_decode_to_nat p :
-  pre_decode (Pos.to_nat p) = (pre_size p, pre_bit p).
-Proof.
-assert(H := Pos2Nat.is_pos p). destruct (Pos.to_nat p) eqn:E. lia.
-unfold pre_decode. now rewrite <-E, Pos2Nat.id.
 Qed.
 
 Lemma pre_size_encode n α :
@@ -147,11 +133,17 @@ revert α; induction m; intros. easy. intros i Hi. destruct i.
   now rewrite pre_size_xI, ltb_S. now rewrite pre_size_xO, ltb_S.
 Qed.
 
+Lemma pre_decode_to_nat p :
+  pre_decode (pred (Pos.to_nat p)) = (pre_size p, pre_bit p).
+Proof.
+assert(H := Pos2Nat.is_pos p). destruct (Pos.to_nat p) eqn:E. easy.
+unfold pre_decode; now rewrite ?pred_succ, <-E, Pos2Nat.id.
+Qed.
+
 Theorem pre_decode_surj m α :
   ∃n, fst (pre_decode n) = m /\ Branch m α (snd (pre_decode n)).
 Proof.
-destruct m. now exists 0. remember (S m) as n.
-exists (Pos.to_nat (pre_encode n α)).
+exists (pred (Pos.to_nat (pre_encode m α))).
 rewrite pre_decode_to_nat; simpl; split.
 apply pre_size_encode. apply Branch_pre_bit_encode.
 Qed.
