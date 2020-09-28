@@ -2,8 +2,8 @@
 
 From set_theory Require Import lib fn set.
 
-(* Cantor space *)
-Definition C := nat -> bool.
+(* Cantor space as a notation (to avoid problems with unfolding) *)
+Notation "'C'" := (nat -> bool).
 
 (* A branch in the Cantor space *)
 Definition Branch m (α β : C) := ∀i, i < m -> α i = β i.
@@ -36,6 +36,13 @@ Lemma Branch_eq m α β :
 Proof.
 intros; apply incl_eq; intros γ Hγ; eapply Branch_trans.
 apply Branch_sym, H. easy. apply H. easy.
+Qed.
+
+Lemma Branch_S m α β :
+  Branch m α β -> α m = β m -> Branch (S m) α β.
+Proof.
+intros Hm HS i Hi. apply Lt.le_lt_or_eq in Hi as [Hi|Hi].
+apply Hm; lia. now replace i with m by lia.
 Qed.
 
 Lemma C_neq (α β : C) :

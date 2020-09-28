@@ -50,14 +50,15 @@ Theorem countable_diff_D X :
   Countable (X ⧵ D X).
 Proof.
 (*
-We need AC to choose a sequence from X at every branch of C. If X were defined
-in a constructive manner (using a law that selects prefixes that belong to X),
-then we would not need AC to prove this lemma.
+We need AC to choose a sequence from X at every branch of C (or zeros if none
+exists). If X were defined in a constructive manner (using a law that selects
+prefixes that belong to X), then we would not need AC to prove this lemma.
 *)
 pose(P s β := X β /\ Branch (fst s) (snd s) β).
 assert(∀s, ∃α, (∃β, P s β) -> P s α). {
   intros. destruct (classic (∃β, P s β)) as [[β Hβ]|Hβ].
   now exists β. now exists zeros. }
+(* If we choose α ∈ X at every branch, we also reach all isolated points. *)
 destruct (choice _ H) as [f Hf]. exists (λ n, f (pre_decode n)).
 (* Find m such that α is the only element of Branch m α. *)
 intros α [H1α H2α]. apply not_all_ex_not in H2α as [m Hm].
@@ -113,8 +114,7 @@ apply incl_eq; unfold Singleton; intros α Hα.
 - (* zeros is a limit point. *)
   subst; intros m. exists (shift_branch m zeros); repeat split.
   + apply C_neq; exists m. unfold shift_branch, shift, pre.
-    replace (m <? m) with false by b_lia;
-    replace (m - m <? 1) with true by b_lia.
+    rewrite ltb_irrefl; replace (m - m <? 1) with true by b_lia.
     now unfold zeros, ones.
   + (* [shift_branch m zeros] is in (D ↑ n) (Shifts X). *)
     admit.

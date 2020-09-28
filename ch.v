@@ -78,7 +78,98 @@ Qed.
 
 End Embedding_predicate.
 
-(* Materialize the postulated function using AC. *)
+(*
+An idea from intuitionism that is quite useful here is to consider X as a law σ
+that accepts or rejects prefixes (a finitary spread). Given such a law we can
+construct another law that represents the embedding of C in X, and then prove
+its correctness constructively. We prove this for any set defined by a law that
+satisfies the split hypothesis (any prefix splits at some point).
+*)
+Section Finitary_spread.
+
+(* We use nat * C instead of list bool to simplify proofs. *)
+Variable σ : nat * C -> bool.
+
+(* σ is only determined by the prefix (well-defined). *)
+Hypothesis σ_wd : ∀m α β, Branch m α β -> σ (m, α) = σ (m, β).
+
+(* X is inhabited. *)
+Hypothesis σ_law0 : ∀α, σ (0, α) = true.
+
+(* A prefix is accepted iff a continuation is accepted. *)
+Hypothesis σ_law1 : ∀m α, σ (m, α) = true <->
+  ∃β, Branch m α β /\ σ (S m, β) = true.
+
+(* Every prefix has two different continuations (eventually splits). *)
+Hypothesis σ_split : ∀m α, σ (m, α) = true -> ∃n β,
+  m <= n /\ Branch m α β /\
+  σ (S n, pre n β zeros) = true /\
+  σ (S n, pre n β ones) = true.
+
+(*
+(m, β) := current prefix in X
+α := input sequence in C
+i := index in the image of α
+*)
+Fixpoint embedding m β α i :=
+  (* Check which directions are free. *)
+  let β0 := pre m β zeros in
+  let β1 := pre m β ones in
+  let b0 := σ (S m, β0) in
+  let b1 := σ (S m, β1) in
+  (* Check if we have reached the image index. *)
+  match i with
+  | 0 => if b0 && b1 then (α 0) else b1
+  | S j =>
+    (* If two continuations are possible, then follow α. *)
+    match b0, b1 with
+    | true, true =>
+      match α 0 with
+      | false      => embedding (S m) β0 (del 1 α) j
+      | true       => embedding (S m) β1 (del 1 α) j
+      end
+    | true, false  => embedding (S m) β0 α j
+    | false, true  => embedding (S m) β1 α j
+    | _, _         => false (* (m, β) cannot be continued *)
+    end
+  end.
+
+Definition embedding' := embedding 0 zeros.
+
+(* σ accepts any prefix of an embedding. *)
+Theorem embedding_σ m α :
+  σ (m, embedding' α) = true.
+Proof.
+induction m. apply σ_law0.
+apply σ_law1 in IHm as [β [H1β H2β]].
+assert(∀γ, embedding' α m = γ m -> Branch (S m) (embedding' α) (pre m β γ)). {
+  intros; apply Branch_S. eapply Branch_trans. apply H1β.
+  apply Branch_pre. unfold pre; now rewrite ltb_irrefl. }
+pose(β0 := pre m β zeros); pose(β1 := pre m β ones);
+destruct (σ (S m, β0)) eqn:b0, (σ (S m, β1)) eqn:b1.
+- destruct (α 0) eqn:E.
++ rewrite σ_wd with (β:=β1). easy. apply H. admit.
++ rewrite σ_wd with (β:=β0). easy. apply H. admit.
+- rewrite σ_wd with (β:=β0). easy. apply H. admit.
+- rewrite σ_wd with (β:=β1). easy. apply H. admit.
+- exfalso; destruct (β m) eqn:b.
+  + rewrite σ_wd with (β:=β1) in H2β.
+    now rewrite b1 in H2β. apply Branch_S. apply Branch_pre.
+    now unfold β1, pre; rewrite ltb_irrefl.
+  + rewrite σ_wd with (β:=β0) in H2β.
+    now rewrite b0 in H2β. apply Branch_S. apply Branch_pre.
+    now unfold β0, pre; rewrite ltb_irrefl.
+Admitted.
+
+(* The embedding is injective. *)
+Theorem embedding_inj α1 α2 i n β :
+  α1 i ≠ α2 i -> ∃j, embedding n β α1 j ≠ embedding n β α2 j.
+Proof.
+Admitted.
+
+End Finitary_spread.
+
+(* Obtain a law for X using AC, and use the above construction. *)
 Theorem nonempty_closed_perfect_embeds_C :
   EmbedsC.
 Proof.

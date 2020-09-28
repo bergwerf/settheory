@@ -35,10 +35,20 @@ Proof. intros; destruct (classic Q). easy. now apply H in H1. Qed.
 End Logic.
 
 (*
+Naming conventions
+------------------
 To denote indices I prefer using: n, m, i, j, k (in that order). One exception
 is sequences of the type nat -> T where T : Set because I use n and m to denote
 prefixes of such sequences. I prefer writing function and theorem labels fully
 in small caps, and to start propositions with an uppercase letter.
+
+The names of theorems do not follow a consistent convention (although I try to
+stick to logical patterns). If a theorem states a fundamental property of one
+specific definition, then the name of that definition is usually written first
+(for example `f_inj` for the injective property of f). If a theorem states a
+property of a combination of definitions, then the names of those definitions
+are usually written in the same order as in the theorem statement (for example
+`countable_union` to denote that a union of countable sets is also countable).
 *)
 
 (* Convert boolean arithmetic relations to Prop. *)
