@@ -73,7 +73,7 @@ auto. easy. eapply Branch_trans. apply H2n. easy.
 Qed.
 
 (* Shift α ∈ C to the m-th branch of zeros (prefix 0^m ++ 1). *)
-Definition shift_branch m α := shift m (pre 1 ones (shift 1 α)).
+Definition shift_branch m α := m>>(pre 1 ones (1>>α)).
 
 (* Copy X ⊆ C at the given branch of zeros. *)
 Definition Shift m X α := ∃β, X β /\ α = shift_branch m β.

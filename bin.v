@@ -8,13 +8,16 @@ Notation "'C'" := (nat -> bool).
 (* A branch in the Cantor space *)
 Definition Branch m (α β : C) := ∀i, i < m -> α i = β i.
 
-Definition zeros (i : nat) := false.
-Definition ones (i : nat) := true.
-Definition pre m (α β : C) i := if i <? m then α i else β i.
-Definition shift m (α : C) i := if i <? m then false else α (i - m).
+Definition const (b : bool) (i : nat) := b.
+Definition zeros := const false.
+Definition ones := const true.
 Definition del m (α : C) i := α (m + i).
+Definition shift m (α : C) i := if i <? m then false else α (i - m).
+Definition pre m (α β : C) i := if i <? m then α i else β i.
 
 Notation "'{0}'" := (Singleton zeros).
+Notation "n >> α" := (shift n α) (at level 20, format "n >> α").
+Notation "n << α" := (del n α) (at level 20, format "n << α").
 
 Lemma Branch_refl m α : Branch m α α.
 Proof. easy. Qed.
@@ -45,6 +48,47 @@ intros Hm HS i Hi. apply Lt.le_lt_or_eq in Hi as [Hi|Hi].
 apply Hm; lia. now replace i with m by lia.
 Qed.
 
+Lemma pre_m_mth m α β : pre m α β m = β m.
+Proof. unfold pre; now rewrite ltb_irrefl. Qed.
+
+Lemma pre_pre m α β γ : pre m (pre m α β) γ = pre m α γ.
+Proof. extensionality i; unfold pre. now destruct (i <? m). Qed.
+
+Lemma shift_m_mth m α : (m>>α) m = α 0.
+Proof. unfold shift; now rewrite ltb_irrefl, sub_diag. Qed.
+
+Lemma del_const b m : m<<(const b) = const b.
+Proof. now extensionality i. Qed.
+
+Lemma del_add m n α : (m + n)<<α = m<<(n<<α).
+Proof. extensionality i; unfold del. now rewrite (add_comm m), add_assoc. Qed.
+
+Lemma del_shift m α :
+  m<<(m>>α) = α.
+Proof.
+extensionality i; unfold del, shift.
+replace (m + i <? m) with false by b_lia.
+now replace (m + i - m) with i by b_lia.
+Qed.
+
+(* Find the least shared branch of two different sequences. *)
+Lemma neq_least_shared_branch α β i :
+  α i ≠ β i -> ∃m, Branch m α β /\ α m ≠ β m.
+Proof.
+revert α β; induction i; intros. now exists 0.
+destruct (IHi (1<<α) (1<<β)) as [m [H1m H2m]]. easy.
+destruct (bool_dec (α 0) (β 0)).
+- exists (S m); split. intros j Hj; destruct j. easy.
+  apply succ_lt_mono in Hj; now apply H1m in Hj. easy.
+- now exists 0.
+Qed.
+
+(*
+Properties that rely on classical logic. We could avoid using classical logic
+for these properties by defining a strong apartness relation.
+*)
+Section Intensional_equality.
+
 Lemma C_neq (α β : C) :
   (∃i, α i ≠ β i) <-> α ≠ β.
 Proof.
@@ -53,32 +97,15 @@ intros H1. apply not_all_ex_not. intros H2; apply H1.
 now extensionality i.
 Qed.
 
-Lemma del_zeros m : del m zeros = zeros.
-Proof. now extensionality i. Qed.
-
-Lemma del_ones m : del m ones = ones.
-Proof. now extensionality i. Qed.
-
 Lemma del_pre_neq m α β γ :
-  del m β ≠ del m γ -> pre m α β ≠ γ.
+  m<<β ≠ m<<γ -> pre m α β ≠ γ.
 Proof.
 intros H. apply C_neq in H as [i Hi]. unfold del in Hi.
 apply C_neq. exists (m + i). unfold pre. replace (m + i <? m) with false.
 easy. symmetry. b_lia.
 Qed.
 
-(* Find the least shared branch of two different sequences. *)
-Lemma neq_least_shared_branch α β :
-  α ≠ β -> ∃m, Branch m α β /\ α m ≠ β m.
-Proof.
-intros H; apply C_neq in H as [i Hi].
-revert Hi; revert α β; induction i; intros. now exists 0.
-destruct (IHi (del 1 α) (del 1 β)) as [m [H1m H2m]]. easy.
-destruct (bool_dec (α 0) (β 0)).
-- exists (S m); split. intros j Hj; destruct j. easy.
-  apply succ_lt_mono in Hj; now apply H1m in Hj. easy.
-- now exists 0.
-Qed.
+End Intensional_equality.
 
 (* A surjective enumeration of all branches in C using BinPos. *)
 Require Import BinPos Pnat.
@@ -90,8 +117,8 @@ Fixpoint pre_encode n α :=
   | 0 => xH
   | S m =>
     match α 0 with
-    | false => xO (pre_encode m (del 1 α))
-    | true => xI (pre_encode m (del 1 α))
+    | false => xO (pre_encode m (1<<α))
+    | true => xI (pre_encode m (1<<α))
     end
   end.
 
@@ -134,7 +161,7 @@ Proof.
 revert α; induction m; intros. easy. intros i Hi. destruct i.
 - simpl; destruct (α 0); unfold pre_bit.
   now rewrite pre_size_xI. now rewrite pre_size_xO.
-- apply succ_lt_mono in Hi; apply IHm with (α:=del 1 α) in Hi.
+- apply succ_lt_mono in Hi; apply IHm with (α:=1<<α) in Hi.
   clear IHm. unfold del in Hi at 1; simpl in Hi.
   unfold pre_bit in *; simpl. destruct (α 0); simpl.
   now rewrite pre_size_xI, ltb_S. now rewrite pre_size_xO, ltb_S.
