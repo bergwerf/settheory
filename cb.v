@@ -21,9 +21,8 @@ such a way that K(X) is also reached. It is noteworthy that CB is always at most
 countable, which follows from the fact that X ⧵ K(X) is at most countable.
 *)
 
-(* Kernel of the Cantor-Bendixon derivative *)
-(* We need a sigma type; [∀Y, CB Y -> Y α] does not work with negation! *)
-Definition K α := ∀σ : {Y | CB Y}, (proj1_sig σ) α.
+(* The kernel is the intersection of all Cantor-Bendixon derivatives. *)
+Definition K α := ∀Y, CB Y -> Y α.
 
 (* All Y ∈ CB(X) are closed. *)
 Theorem CB_closed Y :
@@ -64,8 +63,10 @@ there is a branch of α that is entirely disjoint from Y.
 Lemma CB_isolated_in_disjoint_branch α :
   (X ⧵ K) α -> ∃Y m, CB_Disjoint (m, α) Y.
 Proof.
-intros [H1α H2α]. apply not_all_ex_not in H2α as [[Y HY] H2α]; simpl in *;
-exists Y. apply closed_complement in H2α as [n Hn].
+intros [H1α H2α].
+apply not_all_ex_not in H2α as [Y HY]; exists Y.
+apply imply_to_and in HY as [H1Y H2Y].
+apply closed_complement in H2Y as [n Hn].
 now exists n. now apply CB_closed.
 Qed.
 
@@ -91,8 +92,7 @@ replace K with (⋂ Y). apply CB_isect; intros; apply (proj1 (HY n)).
 (* Now we must prove K = ⋂ Y. *)
 symmetry; apply incl_eq.
 - (* Trivial direction *)
-  intros α Hα n; assert(HYn := proj1 (HY n)).
-  now assert(σYn := Hα (exist _ (Y n) HYn)).
+  intros α Hα n; apply Hα. apply (proj1 (HY n)).
 - (* Hard direction; exploit pre_decode_surj and HY. *)
   apply diff_incl with (U:=X); intros α Hα.
   (* ⋂ Y is included in X. *)
@@ -117,8 +117,8 @@ Qed.
 Corollary CB_K_perfect :
   Perfect K.
 Proof.
-intros α Hα. assert(CB (D K)) by (apply CB_limit, CB_K).
-apply (Hα (exist _ _ H)).
+intros α Hα; apply Hα.
+apply CB_limit, CB_K.
 Qed.
 
 End Closed_sets.

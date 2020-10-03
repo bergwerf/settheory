@@ -34,6 +34,9 @@ Proof. intros i Hi. unfold pre. now apply ltb_lt in Hi; rewrite Hi. Qed.
 Lemma Branch_restrict m n α β : m <= n -> Branch n α β -> Branch m α β.
 Proof. intros Hle H i Hi. apply H. lia. Qed.
 
+Lemma Branch_del m n α β : Branch (m + n) α β -> Branch n (m<<α) (m<<β).
+Proof. intros H i Hi; unfold del. apply H; lia. Qed.
+
 Lemma Branch_eq m α β :
   Branch m α β -> Branch m α = Branch m β.
 Proof.
