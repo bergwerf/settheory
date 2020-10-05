@@ -75,7 +75,7 @@ now replace (m + i - m) with i by b_lia.
 Qed.
 
 (* Find the least shared branch of two different sequences. *)
-Lemma neq_least_shared_branch α β i :
+Lemma find_first_split α β i :
   α i ≠ β i -> ∃m, Branch m α β /\ α m ≠ β m.
 Proof.
 revert α β; induction i; intros. now exists 0.

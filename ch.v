@@ -37,8 +37,7 @@ Definition σ_1way s := σ (false :: s) ⊕ σ (true :: s).
 Definition σ_2way s := σ (false :: s) && σ (true :: s).
 
 (* A prefix is accepted iff a continuation is accepted. *)
-Hypothesis σ_cont : ∀s, σ s = true <->
-  σ (false :: s) = true \/ σ (true :: s) = true.
+Hypothesis σ_cont : ∀s, σ s = true <-> ∃b, σ (b :: s) = true.
 
 (* Every prefix has two different continuations (eventually splits). *)
 Hypothesis σ_split : ∀s, σ s = true -> ∃t, σ_2way (t ++ s) = true.
@@ -67,7 +66,7 @@ Lemma xorb_l b c : b ⊕ c = true -> b = true <-> c = false.
 Proof. now destruct b, c. Qed.
 
 Lemma σ_cons b s : σ (b :: s) = true -> σ s = true.
-Proof. intros; apply σ_cont. destruct b; auto. Qed.
+Proof. intros; apply σ_cont; now exists b. Qed.
 
 Lemma σ_app s t : σ (s ++ t) = true -> σ t = true.
 Proof. induction s; simpl; intros. easy. eapply IHs, σ_cons, H. Qed.
@@ -93,8 +92,8 @@ Lemma σ_12way s :
 Proof.
 unfold σ_1way, σ_2way.
 destruct (σ (false :: s)) eqn:F, (σ (true :: s)) eqn:T; try easy.
-intros H; exfalso. apply σ_cont in H as [H|H].
-now rewrite F in H. now rewrite T in H.
+intros H; exfalso. apply σ_cont in H as [b Hb]; destruct b.
+now rewrite T in Hb. now rewrite F in Hb.
 Qed.
 
 Lemma σ_cons_true s :
@@ -105,7 +104,14 @@ eapply xorb_l. eapply xorb_l. apply σ_12way.
 easy. unfold σ_2way; now rewrite E, andb_false_r. easy.
 Qed.
 
-Lemma Cσ_accepted s α n :
+Theorem Cσ_length s α n :
+  length (Cσ s α n) = length s + n.
+Proof.
+revert s α; induction n; intros; simpl. now rewrite add_0_r.
+destruct (σ_2way s); rewrite IHn; simpl; lia.
+Qed.
+
+Theorem Cσ_accepted s α n :
   σ s = true -> σ (Cσ s α n) = true.
 Proof.
 revert s α; induction n; simpl; intros. easy.
@@ -159,33 +165,163 @@ rewrite add_succ_l, Cσ_S. rewrite IHm, <-Cσ_S. easy.
 easy. intros i Hi; rewrite <-Cσ_S. apply H; lia. all: easy.
 Qed.
 
-Lemma Cσ_inj s α1 α2 i :
-  σ s = true -> α1 i ≠ α2 i -> ∃n, Cσ s α1 n ≠ Cσ s α2 n.
+(* Get the nth value of Cσ s α. *)
+Definition Cσ_nth s α n := hd false (Cσ s α (S n)).
+
+(* Get nth item of reversed list (so the head is at length s). *)
+Definition nth_rev s i := nth i (rev s) false.
+
+(* Cσ_nth is the same as nth_rev of a prefix given by Cσ. *)
+Theorem Cσ_nth_eq_nth_rev m s α :
+  Branch m (Cσ_nth s α) (nth_rev (Cσ s α m)).
 Proof.
-intros Hs Hi; apply neq_least_shared_branch in Hi as [j [H1j H2j]].
+Admitted.
+
+Theorem Cσ_nth_inj s α1 α2 i :
+  σ s = true -> α1 i ≠ α2 i -> ∃n, Cσ_nth s α1 n ≠ Cσ_nth s α2 n.
+Proof.
+intros Hs Hi; apply find_first_split in Hi as [j [H1j H2j]].
 clear i; revert Hs H1j H2j; revert s α1 α2; induction j; intros.
 - (* α1 and α2 are apart at the next split. *)
-  apply Cσ_split with (α:=α1) in Hs as [n [H1n H2n]]; exists (n + 1).
-  erewrite ?Cσ_add, Cσ_change_seq with (n:=n)(α1:=α2)(α2:=α1).
-  simpl; rewrite ?H2n. intros H0; apply H2j. now injection H0.
-  all: apply H1n.
+  apply Cσ_split with (α:=α1) in Hs as [n [H1n H2n]]; exists n.
+  unfold Cσ_nth; erewrite <-add_1_r, ?Cσ_add.
+  erewrite Cσ_change_seq with (n:=n)(α1:=α2)(α2:=α1).
+  simpl; rewrite ?H2n. intros H0; apply H2j. easy. all: apply H1n.
 - (* go to the next split and apply induction hypothesis. *)
   apply Cσ_split with (α:=α1) in Hs as [m [H1m H2m]].
   assert((1<<α1) j ≠ (1<<α2) j) by easy.
-  eapply IHj in H as [n Hn]. exists (m + S n).
-  erewrite ?Cσ_add, Cσ_change_seq with (n:=m)(α1:=α2)(α2:=α1).
-  simpl; rewrite ?H2m. rewrite <-H1j. apply Hn. lia.
+  eapply IHj in H as [n Hn]. exists (m + (n + 1)); unfold Cσ_nth in *.
+  erewrite <-add_succ_r, ?Cσ_add, Cσ_change_seq with (n:=m)(α1:=α2)(α2:=α1).
+  simpl; rewrite ?H2m. rewrite <-H1j, add_comm. apply Hn. lia.
   1-3: apply H1m. unfold σ_2way in H2m; b_Prop.
   now destruct (α1 0). now apply Branch_del.
 Qed.
 
 End Finitary_spread.
 
+(* Every prefix is either in X or is not in X (Law of Excluded Middle). *)
+Definition prefix_LEM s b :=
+  b = true <-> ∃α, X α /\ Branch (length s) (nth_rev s) α.
+
+(* Classical logic shows that prefix_LEM holds. *)
+Lemma prefix_LEM_classic s :
+  ∃b, prefix_LEM s b.
+Proof.
+destruct (classic (∃α, X α /\ Branch (length s) (nth_rev s) α)).
+now exists true. now exists false.
+Qed.
+
+(* Assert the existence of a prefix decider for X. *)
+Section X_prefix_decider.
+
+Variable σ : list bool -> bool.
+Variable Hσ : ∀s, prefix_LEM s (σ s).
+
+(* X is inhabited. *)
+Theorem σ_nil :
+  σ [] = true.
+Proof.
+apply not_empty in nonempty_X as [α Hα].
+apply Hσ; now exists α.
+Qed.
+
+Lemma nth_rev_cases b s i :
+  i < S (length s) ->
+  i < length s /\ nth_rev (b :: s) i = nth_rev s i \/
+  i = length s /\ nth_rev (b :: s) i = b.
+Proof.
+intros; unfold nth_rev; simpl. destruct (eq_dec i (length s)).
+- right; split. easy. rewrite app_nth2, rev_length, <-e, sub_diag. easy.
+  rewrite rev_length; lia.
+- left; split. lia. rewrite app_nth1. easy.
+  rewrite rev_length; lia.
+Qed.
+
+Lemma Branch_S_nth_rev s b α :
+  Branch (length s) (nth_rev s) α -> α (length s) = b ->
+  Branch (S (length s)) (nth_rev (b :: s)) α.
+Proof.
+intros Hm Hb i Hi. eapply nth_rev_cases in Hi
+as [[H R]|[H R]]; rewrite R. now apply Hm. now subst.
+Qed.
+
+(* A prefix is accepted iff a continuation is accepted. *)
+Theorem σ_cont s :
+  σ s = true <-> ∃b, σ (b :: s) = true.
+Proof.
+split.
+- (* Continuation *)
+  intros H; apply Hσ in H as [α [H1α H2α]]. exists (α (length s)).
+  apply Hσ; exists α; split. easy. simpl. now apply Branch_S_nth_rev.
+- (* Pre-continuation *)
+  intros [b Hb]. apply Hσ in Hb as [α [H1α H2α]]; apply Hσ; exists α.
+  split. easy. intros i Hi. rewrite <-H2α; unfold nth_rev.
+  replace (b :: s) with ([b] ++ s) by easy; rewrite rev_app_distr, app_nth1.
+  easy. now rewrite rev_length. simpl; lia.
+Qed.
+
+Lemma andb_forall_true f : (∀b, f b = true) -> f false && f true = true.
+Proof. intros H; now rewrite ?H. Qed.
+
+Lemma bool_double_neq (a b c : bool) : a ≠ b -> a ≠ c -> b = c.
+Proof. now destruct a, b, c. Qed.
+
+(* Every prefix in X eventually splits. *)
+Theorem σ_split s :
+  σ s = true -> ∃t, σ_2way σ (t ++ s) = true.
+Proof.
+intros H; apply Hσ in H as [α [H1α H2α]]. assert(H3α := perfect_X _ H1α).
+destruct (H3α (length s)) as [β [H1β [H2β H3β]]].
+apply C_neq in H1β as [i' Hi']; apply find_first_split in Hi' as [i [H1i H2i]].
+(* Construct a continuation using induction on i - length s. *)
+assert(i >= length s). { apply not_lt; intros H. now apply H3β in H. }
+remember (i - length s) as n; assert(i = length s + n) by lia.
+rewrite H0 in H1i, H2i; clear H3α H3β H Heqn H0 i i'.
+revert H1α H2α H1i H2i H2β; revert s. induction n; intros.
+- (* We are at the 2-way point. *)
+  exists []; rewrite app_nil_l; rewrite add_0_r in *.
+  apply andb_forall_true with (f:=λ b, σ (b :: s)).
+  intros; apply Hσ; simpl. destruct (bool_dec (α (length s)) b).
+  + exists α; split. easy. now apply Branch_S_nth_rev.
+  + exists β; split. easy. apply Branch_S_nth_rev.
+    eapply Branch_trans. apply H2α. easy.
+    eapply bool_double_neq. apply H2i. easy.
+- (* We take a 1-way step. *)
+  pose(b := α (length s)); pose(t := b :: s).
+  assert(length s + S n = length t + n) by (simpl; now rewrite <-add_succ_r).
+  rewrite H in H1i, H2i. apply IHn in H2i as [t' Ht']; try easy.
+  exists (t' ++ [b]); now rewrite <-app_assoc.
+  unfold t; simpl. now apply Branch_S_nth_rev.
+Qed.
+
+End X_prefix_decider.
+
 (* Obtain a law for X using AC, and use the above construction. *)
 Theorem nonempty_closed_perfect_embeds_C :
   EmbedsC.
 Proof.
-Admitted.
+destruct (choice _ prefix_LEM_classic) as [σ Hσ].
+assert(σ_nil := σ_nil σ Hσ);
+assert(σ_cont := σ_cont σ Hσ);
+assert(σ_split := σ_split σ Hσ).
+exists (Cσ_nth σ []); split.
+- (* Dom ⊆ X *)
+  intros; apply closed_X; intros m.
+  apply Cσ_accepted with (α:=α)(n:=m) in σ_nil as Hm. 2: easy.
+  apply Hσ in Hm as [β [H1β H2β]]. apply perfect_X in H1β as H3β.
+  rewrite Cσ_length in H2β; simpl in H2β.
+  destruct (H3β m) as [γ [H1γ [H2γ H3γ]]].
+  destruct (classic (Cσ_nth σ [] α = β)).
+  + exists γ; repeat split. now rewrite H. easy.
+    eapply Branch_trans. now apply Cσ_nth_eq_nth_rev.
+    eapply Branch_trans. apply H2β. easy.
+  + exists β; repeat split. easy. easy.
+    eapply Branch_trans. now apply Cσ_nth_eq_nth_rev. easy.
+- (* Injective *)
+  intros α1 α2; apply classic_contra; intros. apply C_neq in H as [i Hi].
+  apply Cσ_nth_inj with (σ:=σ)(s:=[]) in Hi as [n Hn].
+  apply C_neq; now exists n. all: easy.
+Qed.
 
 End Perfect_embedding.
 
