@@ -16,11 +16,11 @@ Variable output : State -> Value.
 Variable Symbol : Type.
 Variable symb : Trans -> Symbol.
 Variable push : Symbol -> Value -> Value.
-Variable pop : Value -> Symbol.
+Variable peek : Value -> Symbol.
 
 (* The step function encodes the transition into the state output. *)
 Hypothesis step_push : ∀s t, output (step t s) = push (symb t) (output s).
-Hypothesis push_pop : ∀a v, pop (push a v) = a.
+Hypothesis peek_push : ∀a v, peek (push a v) = a.
 
 (* A function which takes a number of steps and outputs a value. *)
 Variable f : State -> nat -> Value.
@@ -34,11 +34,11 @@ Hypothesis f_output : ∀s, f s 0 = output s.
 
 (* f pushes one transition symbol at each successor. *)
 Theorem self_extending s n :
-  f s (S n) = push (pop (f s (S n))) (f s n).
+  f s (S n) = push (peek (f s (S n))) (f s n).
 Proof.
 revert s; induction n; intros.
-- now rewrite f_step, ?f_output, step_push, push_pop.
-- now rewrite f_step, IHn, push_pop, (f_step s).
+- now rewrite f_step, ?f_output, step_push, peek_push.
+- now rewrite f_step, IHn, peek_push, (f_step s).
 Qed.
 
 End Self_extending_state_transition_system.
