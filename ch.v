@@ -28,6 +28,10 @@ An idea from intuitionism that is quite useful here is to consider X as a law σ
 that accepts or rejects prefixes. Given such a law we can construct prefixes in
 σ for any α : C, and then prove their correctness constructively. Later we use
 AC to obtain such a 'spread law' σ for X.
+Note that the embedding function Cσ is actually a state transition system
+wrapped into one function (we need this insight to prove Cσ_self_extending). It
+could be more elegant/efficient to generalize parts of the proof by looking at
+state transition systems.
 *)
 Section Finitary_spread.
 
@@ -72,16 +76,22 @@ Definition nth_rev s i := nth i (rev s) false.
 (* PART I: nth_Cσ is similar to nth_rev. *)
 Section Part_I.
 
+(* Stepping function beloning to Cσ. *)
+Definition Cσ_step (b : bool) n s α := (b :: s, n<<α).
+
+(* State transition function belonging to Cσ. *)
+Definition Cσ_trans s α := if σ_2way s then (α 0, 1) else (σ (true :: s), 0).
+
 Theorem Cσ_self_extending d s α n :
   Cσ s α (S n) = hd d (Cσ s α (S n)) :: Cσ s α n.
 Proof.
 pose(c st i := Cσ (fst st) (snd st) i).
-pose(c_step (t : bool * nat) st := (fst t :: fst st, snd t<<snd st)).
+pose(step t st := Cσ_step (fst t) (snd t) (fst st) (snd st)).
+pose(trans st := Cσ_trans (fst st) (snd st)).
 assert(Hc : ∀s α i, Cσ s α i = c (s, α) i) by (now unfold c); rewrite ?Hc.
-apply self_extending with (output:=fst)(symb:=fst)(step:=c_step);
-clear s α n; unfold c_step; simpl; intros; try easy.
-destruct s as [s α]. unfold c; simpl. destruct (σ_2way s).
-now exists (α 0, 1). now exists (σ (true :: s), 0).
+apply self_extending with (output:=fst)(symb:=fst)(step:=step)(trans:=trans);
+clear s α n; unfold step, Cσ_step, trans, Cσ_trans; simpl; intros; try easy.
+destruct s as [s α]; unfold c; simpl. now destruct (σ_2way s).
 Qed.
 
 Lemma Cσ_length s α n :
