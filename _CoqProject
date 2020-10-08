@@ -1,6 +1,7 @@
 -R . set_theory
 
 lib.v
+misc.v
 
 fn.v
 pair.v
