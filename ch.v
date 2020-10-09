@@ -263,10 +263,13 @@ Definition prefix_LEM s b :=
 
 (* Classical logic shows that prefix_LEM holds. *)
 Lemma prefix_LEM_classic s :
-  ∃b, prefix_LEM s b.
+  ∃!b, prefix_LEM s b.
 Proof.
-destruct (classic (∃α, X α /\ Branch (length s) (nth_rev s) α)).
-now exists true. now exists false.
+unfold unique; destruct (classic (∃α, X α /\ Branch (length s) (nth_rev s) α)).
+- exists true; split; try easy. intros b; destruct b; try easy.
+  now intros H'; symmetry; apply H'.
+- exists false; split; try easy. intros b; destruct b; try easy.
+  now intros H'; exfalso; apply H, H'.
 Qed.
 
 (* Assert the existence of a prefix decider for X. *)
@@ -346,7 +349,7 @@ End X_prefix_decider.
 Theorem nonempty_closed_perfect_embeds_C :
   EmbedsC.
 Proof.
-destruct (choice _ prefix_LEM_classic) as [σ Hσ].
+destruct (unique_choice _ _ _ prefix_LEM_classic) as [σ Hσ].
 assert(σ_nil := σ_nil σ Hσ);
 assert(σ_cont := σ_cont σ Hσ);
 assert(σ_split := σ_split σ Hσ).

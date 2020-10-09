@@ -20,6 +20,11 @@ Require Export FunctionalExtensionality.
 Export Nat.
 Export Bool.
 
+(* Some global notations. *)
+Notation "'∃!' x .. y , P" := (exists! x, .. (exists! y, P) ..)
+  (at level 200, x binder, y binder, right associativity,
+  format "'[ ' '[ ' ∃! x .. y ']' , '/' P ']'") : type_scope.
+
 (* Basic laws of logic that are absent in Coq's library. *)
 Section Logic.
 

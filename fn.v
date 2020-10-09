@@ -27,10 +27,12 @@ Qed.
 Theorem fn_inj_surj_bi :
   Injective -> Surjective -> Bijective.
 Proof.
-(* We use AC to construct an inverse. *)
-intros Inj Surj. apply choice in Surj as [g Hg]. exists g.
+intros inj surj. assert(∀y, ∃!x, f x = y). {
+  intros; destruct (surj y) as [x Hx]; exists x. split; try easy.
+  intros; apply inj. now rewrite H, Hx. }
+apply unique_choice in H as [g Hg]; exists g.
 split; extensionality x; unfold compose, id.
-apply Inj, Hg. apply Hg.
+apply inj, Hg. apply Hg.
 Qed.
 
 End Function_propositions.
