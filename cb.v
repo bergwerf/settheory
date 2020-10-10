@@ -47,8 +47,8 @@ Theorem CB_countable_diff Y :
 Proof.
 intros H; induction H.
 - exists (λ _, zeros); now intros α [H1α H2α].
-- erewrite diff_union. 2: apply CB_closed. apply countable_union.
-  easy. apply countable_diff_D. easy. now apply CB_incl.
+- erewrite diff_union. 2: now apply CB_closed. apply countable_union.
+  easy. apply countable_diff_D. now apply CB_incl.
 - rewrite diff_ωisect_eq_ωunion_diff; apply countable_ωunion; now intros.
 Qed.
 
