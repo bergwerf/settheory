@@ -40,3 +40,32 @@ Arguments Bijective {_ _} _.
 
 (* Knuth's up-arrow notation for iterated composition *)
 Notation "f ↑ n" := (iter n f) (at level 60).
+
+(* Helpful lemmas when working with function relations. *)
+Section Function_relations.
+
+Variable X : Type.
+Variable Y : Type.
+
+(* A function that can be separated into two parts. *)
+Lemma fn_rel_lem (P : X -> Prop) Pos Neg :
+  (∀x, P x -> ∃!y, Pos x y) ->
+  (∀x, ¬P x -> ∃!y, Neg x y) ->
+  ∀x, ∃!y : Y, (P x /\ Pos x y) \/ (¬P x /\ Neg x y).
+Proof.
+intros Hpos Hneg x. destruct (classic (P x)) as [H|H].
+- destruct (Hpos _ H) as [y [H1y H2y]]; exists y; split. now left.
+  intros x' [Hx'|Hx']. now apply H2y. easy.
+- destruct (Hneg _ H) as [y [H1y H2y]]; exists y; split. now right.
+  intros x' [Hx'|Hx']. easy. now apply H2y.
+Qed.
+
+(* A function relation based on a function. *)
+Lemma fn_rel_fn (f : X -> Y) x : ∃!y, y = f x.
+Proof. now exists (f x). Qed.
+
+(* A function relation based on a constant. *)
+Lemma fn_rel_const (c : Y) : ∃!y, y = c.
+Proof. now exists c. Qed.
+
+End Function_relations.

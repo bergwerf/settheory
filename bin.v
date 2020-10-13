@@ -186,3 +186,25 @@ apply pre_size_encode. apply Branch_pre_bit_encode.
 Qed.
 
 End Enumerate_branches.
+
+(* We can order prefixes of the same length. *)
+Section Prefix_order.
+
+(* The prefix (m, α) comes before (m, β). *)
+Definition BranchLt m α β := ∃i, i < m /\ α m = false /\ β m = true.
+
+Variable X : P C.
+
+(* (m, α) is the smallest non-empty branch in X at depth m. *)
+Definition MinBranch m α := Branch m α ∩ X ≠ ∅ /\
+  ∀β, BranchLt m β α -> Branch m β ∩ X = ∅.
+
+(* A non-empty set has a smallest branch at every depth. *)
+Lemma min_branch_ex m :
+  X ≠ ∅ -> ∃α, MinBranch m α.
+Proof.
+intros H; apply not_empty in H as [α Hα].
+induction m.
+Abort.
+
+End Prefix_order.

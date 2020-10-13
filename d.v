@@ -68,10 +68,29 @@ apply NNPP; intros H5n; apply Hm. exists (f (pre_decode n)); repeat split.
 auto. easy. eapply Branch_trans. apply H2n. easy.
 Qed.
 
-(* countable_diff_D can be proved without choice for closed sets. *)
-Theorem closed_countable_diff_D X :
-  Closed X -> Countable (X ⧵ D X).
+(* countable_diff_D can be proved without choice, with some extra trouble. *)
+Theorem countable_diff_D_again X :
+  Countable (X ⧵ D X).
 Proof.
+(* Under every branch we follow the least element of X, or default to zero. *)
+pose(Stick m α i b :=
+  (Branch m α ∩ X = ∅ /\ b = false) \/
+  (Branch m α ∩ X ≠ ∅ /\ ∃β, MinBranch (Branch m α) (S i) β /\ b = β i)).
+pose(F m α i b := (i < m /\ b = α i) \/ (¬(i < m) /\ Stick m α i b)).
+pose(G n := let (m, α) := pre_decode n in F m α).
+(* Prove that G is a function relation. *)
+assert(G_func : ∀p, ∃!b, G (fst p) (snd p) b). { intros [n i]; simpl.
+  unfold G; destruct (pre_decode n) as [m α]; unfold F.
+  revert i; apply fn_rel_lem; intros i _. apply fn_rel_fn.
+  revert i; apply fn_rel_lem; intros i Hi. apply fn_rel_const.
+  (* Obtain the smallest branch at depth S i. *)
+  admit. }
+(* Now we can turn G into a function. *)
+apply unique_choice in G_func as [g Hg]; exists (λ n i, g (n, i)).
+(* Find m such that α is the only element of Branch m α. *)
+intros α [H1α H2α]; apply not_all_ex_not in H2α as [m Hm].
+destruct (pre_decode_surj m α) as [n [H1n H2n]]; exists n.
+(* Show that g must follow α since it is the only element in this branch. *)
 Abort.
 
 (* Now we start building examples of derived sets. *)
