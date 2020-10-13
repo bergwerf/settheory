@@ -49,11 +49,7 @@ Qed.
 Theorem countable_diff_D X :
   Countable (X ⧵ D X).
 Proof.
-(*
-We need AC to choose a sequence from X at every branch of C (or zeros if none
-exists). If X were defined in a constructive manner (using a law that selects
-prefixes that belong to X), then we would not need AC to prove this lemma.
-*)
+(* The easiest approach is to `choose' a point in X under every branch. *)
 pose(P s β := X β /\ Branch (fst s) (snd s) β).
 assert(∀s, ∃α, (∃β, P s β) -> P s α). {
   intros. destruct (classic (∃β, P s β)) as [[β Hβ]|Hβ].
@@ -72,6 +68,15 @@ apply NNPP; intros H5n; apply Hm. exists (f (pre_decode n)); repeat split.
 auto. easy. eapply Branch_trans. apply H2n. easy.
 Qed.
 
+(* countable_diff_D can be proved without choice for closed sets. *)
+Theorem closed_countable_diff_D X :
+  Closed X -> Countable (X ⧵ D X).
+Proof.
+Abort.
+
+(* Now we start building examples of derived sets. *)
+Section Examples.
+
 (* Shift α ∈ C to the m-th branch of zeros (prefix 0^m ++ 1). *)
 Definition shift_branch m α := m>>(pre 1 ones (1>>α)).
 
@@ -80,18 +85,6 @@ Definition Shift m X α := ∃β, X β /\ α = shift_branch m β.
 
 (* Copy X ⊆ C at every branch of zeros. *)
 Definition Shifts X := ⋃ λ m, Shift m X.
-
-(* Shifting and removing isolated points commute. *)
-Lemma D_Shift_comm m :
-  D ∘ (Shift m) = (Shift m) ∘ D.
-Proof.
-Abort.
-
-(* α ∈ X iff shift_branch m α ∈ Shifts X. *)
-Lemma shift_branch_Shifts (X : P C) m α :
-  (Shifts X) (shift_branch m α) = X α.
-Proof.
-Abort.
 
 (*
 For every natural number n, there exists a set X ⊆ C such that {0} is left
@@ -150,3 +143,5 @@ Theorem Lim_n_D_ex n :
   ∃X, (Lim ↑ n) D X = {0}.
 Proof.
 Abort.
+
+End Examples.

@@ -10,17 +10,15 @@ Variable f : A -> B.
 
 Definition Injective := ∀x z, f x = f z -> x = z.
 Definition Surjective := ∀y, ∃x, f x = y.
-Definition Bijective := ∃g, g ∘ f = id /\ f ∘ g = id.
+Definition Bijective := ∃g, (∀ x, g (f x) = x) /\ ∀y, f (g y) = y.
 
 (* A bijection is certainly injective and surjective. *)
 Theorem fn_bi_inj_surj :
   Bijective -> Injective /\ Surjective.
 Proof.
 intros [g [H2g H1g]]; split.
-- intros x z Hxz. assert(H' := equal_f H2g); unfold id, compose in H'.
-  now rewrite <-H'; rewrite <-H', Hxz at 1.
-- intros y; exists (g y). replace y with (id y) at 2 by easy.
-  eapply equal_f in H1g; unfold compose in H1g; apply H1g.
+- intros x z Hxz. now rewrite <-H2g, <-Hxz.
+- intros y; now exists (g y).
 Qed.
 
 (* An injective and surjective function is bijective. *)
@@ -31,8 +29,7 @@ intros inj surj. assert(∀y, ∃!x, f x = y). {
   intros; destruct (surj y) as [x Hx]; exists x. split; try easy.
   intros; apply inj. now rewrite H, Hx. }
 apply unique_choice in H as [g Hg]; exists g.
-split; extensionality x; unfold compose, id.
-apply inj, Hg. apply Hg.
+split; intros. now apply inj. easy.
 Qed.
 
 End Function_propositions.
@@ -43,9 +40,3 @@ Arguments Bijective {_ _} _.
 
 (* Knuth's up-arrow notation for iterated composition *)
 Notation "f ↑ n" := (iter n f) (at level 60).
-
-Lemma fold_compose {X Y Z} (f : X -> Y) (g : Y -> Z) x : g (f x) = (g ∘ f) x.
-Proof. easy. Qed.
-
-Lemma iter_S_compose {X} (f : X -> X) n : f ↑ (S n) = f ∘ (f ↑ n).
-Proof. easy. Qed.

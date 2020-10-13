@@ -97,6 +97,7 @@ Qed.
 Corollary π_bijective :
   Bijective π.
 Proof.
-exists π_inv; split; extensionality x.
-apply π_inv_π_id. apply π_π_inv_id.
+exists π_inv; split.
+apply π_inv_π_id.
+apply π_π_inv_id.
 Qed.

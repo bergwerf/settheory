@@ -87,6 +87,7 @@ Theorem CB_K :
   CB K.
 Proof.
 (* Obtain a sequence Y from the previous theorem using AC. We claim K = ⋂ Y. *)
+(* We could use unique_choice by exploiting a well-ordening of CB. *)
 destruct (choice _ CB_choose_disjoint_at_pre_decode) as [Y HY].
 replace K with (⋂ Y). apply CB_isect; intros; apply (proj1 (HY n)).
 (* Now we must prove K = ⋂ Y. *)

@@ -186,3 +186,34 @@ exists (π (i, m)); unfold f; now rewrite π_inv_π_id.
 Qed.
 
 End Other_lemmas.
+
+(*
+We used the choice axiom to prove countable_ωunion. There seems to be no way to
+avoid this, except by changing the definition of Countable. This is possible
+while preserving the use of classical logic; by using function relations that
+can be effectively obtained.
+
+Unfortunately this also means proofs that involve Countable must be within Type,
+which would require induction on CB to be within Type. Hence proofs about CB can
+then no longer use classical logic.
+*)
+Section Countable_ωunion_without_choice.
+
+Definition CountableRel {X} (V : P X) := {F : nat -> X -> Prop |
+  (∀n, ∃!x, F n x) /\ ∀x, V x -> ∃n, F n x}.
+
+(* A countable union of countable sets is countable. *)
+Lemma countable_rel_ωunion {X} (Y : nat -> P X) :
+  (∀n, CountableRel (Y n)) -> CountableRel (⋃ Y).
+Proof.
+intros H;
+pose(F n := proj1_sig (H n));
+pose(HF n := proj2_sig (H n));
+pose(G x y := let (n, i) := π_inv x in F n i y).
+exists G; split; intros x; unfold G.
+- destruct (π_inv x) as [n i]. apply (proj1 (HF n)).
+- intros [n Hn]. apply (proj2 (HF n)) in Hn as [i Hi].
+  exists (π ((n, i))). now rewrite π_inv_π_id.
+Qed.
+
+End Countable_ωunion_without_choice.

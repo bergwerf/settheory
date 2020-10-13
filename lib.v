@@ -6,8 +6,6 @@ Require Export Utf8.         (* Unicode notations *)
 Require Export Compare_dec.  (* Decidable relations *)
 
 (* Definitions *)
-Require Export Basics.       (* Some basic combinators *)
-Require Export Combinators.  (* Proofs about combinators *)
 Require Export PeanoNat.     (* Peano arithmetic *)
 
 (* Logic *)
