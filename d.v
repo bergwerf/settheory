@@ -51,22 +51,23 @@ Theorem countable_diff_D X :
 Proof.
 (* Under every branch we follow the least element of X, or default to zero. *)
 (* We could also use the choice axiom for a shorter proof. *)
-pose(Stick m α i b :=
+pose(F1 m α i b :=
   (Branch m α ∩ X = ∅ /\ b = false) \/
   (Branch m α ∩ X ≠ ∅ /\ ∃β, MinBranch (Branch m α ∩ X) (S i) β /\ b = β i)).
-pose(F m α i b := (i < m /\ b = α i) \/ (¬(i < m) /\ Stick m α i b)).
-pose(G n := let (m, α) := pre_decode n in F m α).
-(* Prove that G is a function relation. *)
-assert(G_func : ∀p, ∃!b, G (fst p) (snd p) b). { intros [n i]; simpl.
-  unfold G; destruct (pre_decode n) as [m α]; unfold F.
+pose(F2 m α i b := (i < m /\ b = α i) \/ (¬(i < m) /\ F1 m α i b)).
+pose(F3 n := let (m, α) := pre_decode n in F2 m α).
+(* Prove that F3 is a function relation. *)
+assert(F3_func : ∀p, ∃!b, F3 (fst p) (snd p) b). {
+  intros [n i]; simpl.
+  unfold F3; destruct (pre_decode n) as [m α]; unfold F2.
   revert i; apply fn_rel_lem; intros i _. apply fn_rel_fn.
   revert i; apply fn_rel_lem; intros i Hi. apply fn_rel_const.
   (* Obtain the smallest branch at depth S i. *)
   destruct (min_branch_ex (Branch m α ∩ X) (S i)) as [β Hβ]. easy.
   exists (β i); split. now exists β. intros b [γ [Hγ R]]; subst b.
   eapply min_branch_unique. apply Hβ. apply Hγ. lia. }
-(* Now we can turn G into a function. *)
-apply unique_choice in G_func as [g Hg]; exists (λ n i, g (n, i)).
+(* We now turn F3 into a function. *)
+apply unique_choice in F3_func as [f3 Hf3]; exists (λ n i, f3 (n, i)).
 (* Find m such that α is the only element in Branch m α ∩ X. *)
 intros α [H1α H2α]; apply not_all_ex_not in H2α as [m Hm].
 destruct (pre_decode_surj m α) as [n [H1n H2n]]; exists n.
@@ -74,15 +75,15 @@ assert(Branch m α ∩ X = Singleton α). {
   apply incl_eq; unfold Singleton; intros β Hβ.
   apply NNPP; intros H. apply Hm; now exists β.
   subst β; split. apply branch_refl. easy. }
-(* Now g must follow α since it is the only element in this branch. *)
-extensionality i; assert(Hi := Hg (n, i)); remember (g (n, i)) as b.
-simpl in Hi; unfold G in Hi; destruct (pre_decode n) as [k β]; unfold F in Hi.
+(* Now f3 follows α. *)
+extensionality i; assert(Hi := Hf3 (n, i)); remember (f3 (n, i)) as b.
+simpl in Hi; unfold F3 in Hi; destruct (pre_decode n) as [k β]; unfold F2 in Hi.
 simpl in H1n, H2n; subst k. destruct Hi as [[H1i H2i]|[_ Hi]].
 - (* b coincides with the pre_decode branch. *)
   rewrite H2i; symmetry. now apply H2n.
 - (* b must stick to α. *)
   apply branch_sym in H2n.
-  unfold Stick in Hi; destruct Hi as [[Hi _]|[_ [γ [Hγ R]]]].
+  unfold F1 in Hi; destruct Hi as [[Hi _]|[_ [γ [Hγ R]]]].
   exfalso; apply eq_incl in Hi as [Hi _]; now apply (Hi α).
   rewrite R. erewrite branch_eq, H in Hγ; try easy.
   destruct Hγ as [Hγ _]. apply not_empty in Hγ as [δ [H1δ H2δ]].
