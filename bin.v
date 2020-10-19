@@ -2,6 +2,13 @@
 
 From set_theory Require Import lib fn set.
 
+Section Preliminaries.
+
+Lemma lt_S m n : m < S n -> m < n \/ m = n.
+Proof. lia. Qed.
+
+End Preliminaries.
+
 (* Cantor space as a notation (to avoid problems with unfolding) *)
 Notation "'C'" := (nat -> bool).
 
@@ -19,36 +26,48 @@ Notation "'{0}'" := (Singleton zeros).
 Notation "n >> α" := (shift n α) (at level 20, format "n >> α").
 Notation "n << α" := (del n α) (at level 20, format "n << α").
 
-Lemma Branch_refl m α : Branch m α α.
+Lemma branch_refl m α : Branch m α α.
 Proof. easy. Qed.
 
-Lemma Branch_sym m α β : Branch m α β -> Branch m β α.
+Lemma branch_sym m α β : Branch m α β -> Branch m β α.
 Proof. intros H i Hi. symmetry. auto. Qed.
 
-Lemma Branch_trans m α β γ : Branch m α β -> Branch m β γ -> Branch m α γ.
+Lemma branch_trans m α β γ : Branch m α β -> Branch m β γ -> Branch m α γ.
 Proof. intros H1 H2 i Hi. etransitivity. all: auto. Qed.
 
-Lemma Branch_pre m α β : Branch m α (pre m α β).
+Lemma branch_pre m α β : Branch m α (pre m α β).
 Proof. intros i Hi. unfold pre. now apply ltb_lt in Hi; rewrite Hi. Qed.
 
-Lemma Branch_restrict m n α β : m <= n -> Branch n α β -> Branch m α β.
-Proof. intros Hle H i Hi. apply H. lia. Qed.
+Lemma branch_incl m n α : m <= n -> Branch n α ⊆ Branch m α.
+Proof. intros Hle β H i Hi. apply H. lia. Qed.
 
-Lemma Branch_del m n α β : Branch (m + n) α β -> Branch n (m<<α) (m<<β).
+Lemma branch_del m n α β : Branch (m + n) α β -> Branch n (m<<α) (m<<β).
 Proof. intros H i Hi; unfold del. apply H; lia. Qed.
 
-Lemma Branch_eq m α β :
+Lemma branch_eq m α β :
   Branch m α β -> Branch m α = Branch m β.
 Proof.
-intros; apply incl_eq; intros γ Hγ; eapply Branch_trans.
-apply Branch_sym, H. easy. apply H. easy.
+intros; apply incl_eq; intros γ Hγ; eapply branch_trans.
+apply branch_sym, H. easy. apply H. easy.
 Qed.
 
-Lemma Branch_S m α β :
+Lemma branch_S m α β :
   Branch m α β -> α m = β m -> Branch (S m) α β.
 Proof.
-intros Hm HS i Hi. apply Lt.le_lt_or_eq in Hi as [Hi|Hi].
-apply Hm; lia. now replace i with m by lia.
+intros Hm HS i Hi. apply lt_S in Hi as [Hi|Hi].
+now apply Hm. now subst.
+Qed.
+
+Lemma branch_union_S m α :
+  Branch m α = Branch (S m) (pre m α zeros) ∪ Branch (S m) (pre m α ones).
+Proof.
+apply incl_eq; intros β.
+- intros Hβ. destruct (β m) eqn:B. 1: right. 2: left.
+  1,2: apply branch_S. 1,3: eapply branch_trans.
+  1,3: apply branch_sym, branch_pre. 1,2: easy.
+  1,2: unfold pre, zeros, ones, const; now rewrite ltb_irrefl.
+- intros [Hβ|Hβ]; apply branch_incl with (m:=m) in Hβ.
+  1,3: eapply branch_trans. 1,3: apply branch_pre. 1,2: apply Hβ. all: lia.
 Qed.
 
 Lemma pre_m_mth m α β : pre m α β m = β m.
@@ -76,14 +95,14 @@ Qed.
 
 (* Find the least shared branch of two different sequences. *)
 Lemma find_first_split α β i :
-  α i ≠ β i -> ∃m, Branch m α β /\ α m ≠ β m.
+  α i ≠ β i -> ∃m, m <= i /\ Branch m α β /\ α m ≠ β m.
 Proof.
 revert α β; induction i; intros. now exists 0.
-destruct (IHi (1<<α) (1<<β)) as [m [H1m H2m]]. easy.
+destruct (IHi (1<<α) (1<<β)) as [m [H1m [H2m H3m]]]. easy.
 destruct (bool_dec (α 0) (β 0)).
-- exists (S m); split. intros j Hj; destruct j. easy.
-  apply succ_lt_mono in Hj; now apply H1m in Hj. easy.
-- now exists 0.
+- exists (S m); repeat split. lia. intros j Hj; destruct j. easy.
+  apply succ_lt_mono in Hj; now apply H2m in Hj. easy.
+- exists 0; repeat split. lia. all: easy.
 Qed.
 
 (*
@@ -158,7 +177,7 @@ revert α; induction n; simpl; intros. easy.
 destruct (α 0); simpl. all: apply eq_S, IHn.
 Qed.
 
-Lemma Branch_pre_bit_encode m α :
+Lemma branch_pre_bit_encode m α :
   Branch m α (pre_bit (pre_encode m α)).
 Proof.
 revert α; induction m; intros. easy. intros i Hi. destruct i.
@@ -182,7 +201,7 @@ Theorem pre_decode_surj m α :
 Proof.
 exists (pred (Pos.to_nat (pre_encode m α))).
 rewrite pre_decode_to_nat; simpl; split.
-apply pre_size_encode. apply Branch_pre_bit_encode.
+apply pre_size_encode. apply branch_pre_bit_encode.
 Qed.
 
 End Enumerate_branches.
@@ -191,7 +210,8 @@ End Enumerate_branches.
 Section Prefix_order.
 
 (* The prefix (m, α) comes before (m, β). *)
-Definition BranchLt m α β := ∃i, i < m /\ α m = false /\ β m = true.
+Definition BranchLt m α β :=
+  ∃i, i < m /\ Branch i α β /\ α i = false /\ β i = true.
 
 Variable X : P C.
 
@@ -199,12 +219,78 @@ Variable X : P C.
 Definition MinBranch m α := Branch m α ∩ X ≠ ∅ /\
   ∀β, BranchLt m β α -> Branch m β ∩ X = ∅.
 
+(* We can retract the property MinBranch. *)
+Lemma min_branch_incl m :
+  MinBranch (S m) ⊆ MinBranch m.
+Proof.
+intros α [H1 H2]; split.
+- apply not_empty in H1 as [β [H1β H2β]]; apply not_empty; exists β; split.
+  eapply branch_incl. 2: apply H1β. lia. easy.
+- intros β [i [H1i [H2i H3i]]]; apply NNPP; intros Hneg.
+  apply not_empty in Hneg as [γ [H1γ H2γ]].
+  eapply PNNP. apply H2 with (β:=γ); exists i; repeat split. lia.
+  eapply branch_trans. apply branch_sym, branch_incl with (n:=m). lia.
+  apply H1γ. easy. now rewrite <-H1γ. easy. apply not_empty; now exists γ.
+Qed.
+
+(* A minimal branch is unique. *)
+Lemma min_branch_unique m α β :
+  MinBranch m α -> MinBranch m β -> Branch m α β.
+Proof.
+intros Hα Hβ; induction m. easy.
+assert(Branch m α β) by (apply IHm; now apply min_branch_incl).
+intros i Hi; apply lt_S in Hi as [Hi|Hi]. now apply H.
+subst. destruct (α m) eqn:A, (β m) eqn:B; try easy; exfalso.
+- apply Hβ, Hα. exists m; repeat split; try easy. lia. now apply branch_sym.
+- apply Hα, Hβ. exists m; repeat split; try easy. lia.
+Qed.
+
+(* BranchLt successor cases. *)
+Lemma branch_lt_S m α β :
+  BranchLt (S m) α β -> BranchLt m α β \/
+  (Branch m α β /\ α m = false /\ β m = true).
+Proof.
+intros [i [H1i [H2i H3i]]]; apply lt_S in H1i as [H|H].
+left; now exists i. subst; now right.
+Qed.
+
+(* BranchLt on a prefix. *)
+Lemma branch_lt_pre m α β γ :
+  BranchLt m α (pre m β γ) -> BranchLt m α β.
+Proof.
+intros [i [H1i [H2i H3i]]]; unfold pre in H3i.
+replace (i <? m) with true in H3i by b_lia.
+exists i; repeat split; try easy. eapply branch_trans. apply H2i.
+intros j Hj; unfold pre; now replace (j <? m) with true by b_lia.
+Qed.
+
 (* A non-empty set has a smallest branch at every depth. *)
 Lemma min_branch_ex m :
   X ≠ ∅ -> ∃α, MinBranch m α.
 Proof.
-intros H; apply not_empty in H as [α Hα].
-induction m.
-Abort.
+intros HX; induction m.
+- exists zeros. apply not_empty in HX as [α Hα]; split.
+  apply not_empty; now exists α. now intros β [i [Hi _]].
+- destruct IHm as [α [H1α H2α]].
+  destruct (classic (MinBranch (S m) (pre m α ones))).
+  now exists (pre m α ones). exists (pre m α zeros); split.
+  + apply not_and_or in H as [H|H]. apply NNPP in H. intros Hneg; apply H1α.
+    now rewrite branch_union_S, isect_distr_union, H, Hneg, union_empty.
+    apply not_all_ex_not in H as [β Hβ];
+    apply imply_to_and in Hβ as [H1β H2β];
+    apply branch_lt_S in H1β as [H1β|H1β].
+    * apply branch_lt_pre in H1β; apply H2α in H1β.
+      exfalso; apply H2β. eapply incl_empty. 2: apply H1β.
+      apply incl_isect_incl, branch_incl; lia.
+    * assert(Branch (S m) β (pre m α zeros)). {
+        apply branch_S. eapply branch_trans. apply H1β.
+        intros i Hi; unfold pre; now replace (i <? m) with true by b_lia.
+        unfold pre; rewrite ltb_irrefl. easy. }
+      apply branch_eq in H; now rewrite <-H.
+  + intros β Hβ; apply branch_lt_S in Hβ as [Hβ|Hβ].
+    * apply branch_lt_pre in Hβ; apply H2α in Hβ.
+      eapply incl_empty. 2: apply Hβ. apply incl_isect_incl, branch_incl; lia.
+    * unfold pre in Hβ; now rewrite ltb_irrefl in Hβ.
+Qed.
 
 End Prefix_order.

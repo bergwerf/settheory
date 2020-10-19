@@ -236,7 +236,7 @@ Qed.
 Theorem nth_Cσ_inj s α1 α2 i :
   σ s = true -> α1 i ≠ α2 i -> ∃n, nth_Cσ s α1 n ≠ nth_Cσ s α2 n.
 Proof.
-intros Hs Hi; apply find_first_split in Hi as [j [H1j H2j]].
+intros Hs Hi; apply find_first_split in Hi as [j [_ [H1j H2j]]].
 clear i; revert Hs H1j H2j; revert s α1 α2; induction j; intros.
 - (* α1 and α2 are apart at the next split. *)
   apply Cσ_split with (α:=α1) in Hs as [n [H1n H2n]]; exists n.
@@ -250,7 +250,7 @@ clear i; revert Hs H1j H2j; revert s α1 α2; induction j; intros.
   erewrite <-add_succ_r, ?Cσ_add, Cσ_change_seq with (n:=m)(α1:=α2)(α2:=α1).
   simpl; rewrite ?H2m. rewrite <-H1j, add_comm. apply Hn. lia.
   1-3: apply H1m. unfold σ_2way in H2m; b_Prop.
-  now destruct (α1 0). now apply Branch_del.
+  now destruct (α1 0). now apply branch_del.
 Qed.
 
 End Part_II.
@@ -286,7 +286,7 @@ apply not_empty in nonempty_X as [α Hα].
 apply Hσ; now exists α.
 Qed.
 
-Lemma Branch_S_nth_rev s b α :
+Lemma branch_S_nth_rev s b α :
   Branch (length s) (nth_rev s) α -> α (length s) = b ->
   Branch (S (length s)) (nth_rev (b :: s)) α.
 Proof.
@@ -301,7 +301,7 @@ Proof.
 split.
 - (* Continuation *)
   intros H; apply Hσ in H as [α [H1α H2α]]. exists (α (length s)).
-  apply Hσ; exists α; split. easy. simpl. now apply Branch_S_nth_rev.
+  apply Hσ; exists α; split. easy. simpl. now apply branch_S_nth_rev.
 - (* Pre-continuation *)
   intros [b Hb]. apply Hσ in Hb as [α [H1α H2α]]; apply Hσ; exists α.
   split. easy. intros i Hi. rewrite <-H2α; unfold nth_rev.
@@ -321,7 +321,8 @@ Theorem σ_split s :
 Proof.
 intros H; apply Hσ in H as [α [H1α H2α]]. assert(H3α := perfect_X _ H1α).
 destruct (H3α (length s)) as [β [H1β [H2β H3β]]].
-apply C_neq in H1β as [i' Hi']; apply find_first_split in Hi' as [i [H1i H2i]].
+apply C_neq in H1β as [i' Hi'];
+apply find_first_split in Hi' as [i [_ [H1i H2i]]].
 (* Construct a continuation using induction on i - length s. *)
 assert(i >= length s). { apply not_lt; intros H. now apply H3β in H. }
 remember (i - length s) as n; assert(i = length s + n) by lia.
@@ -331,16 +332,16 @@ revert H1α H2α H1i H2i H2β; revert s. induction n; intros.
   exists []; rewrite app_nil_l; rewrite add_0_r in *.
   apply andb_forall_true with (f:=λ b, σ (b :: s)).
   intros; apply Hσ; simpl. destruct (bool_dec (α (length s)) b).
-  + exists α; split. easy. now apply Branch_S_nth_rev.
-  + exists β; split. easy. apply Branch_S_nth_rev.
-    eapply Branch_trans. apply H2α. easy.
+  + exists α; split. easy. now apply branch_S_nth_rev.
+  + exists β; split. easy. apply branch_S_nth_rev.
+    eapply branch_trans. apply H2α. easy.
     eapply bool_double_neq. apply H2i. easy.
 - (* We take a 1-way step. *)
   pose(b := α (length s)); pose(t := b :: s).
   assert(length s + S n = length t + n) by (simpl; now rewrite <-add_succ_r).
   rewrite H in H1i, H2i. apply IHn in H2i as [t' Ht']; try easy.
   exists (t' ++ [b]); now rewrite <-app_assoc.
-  unfold t; simpl. now apply Branch_S_nth_rev.
+  unfold t; simpl. now apply branch_S_nth_rev.
 Qed.
 
 End X_prefix_decider.
@@ -363,10 +364,10 @@ exists (nth_Cσ σ []); split.
   destruct (H3β m) as [γ [H1γ [H2γ H3γ]]].
   destruct (classic (nth_Cσ σ [] α = β)).
   + exists γ; repeat split. now rewrite H. easy.
-    eapply Branch_trans. now apply nth_Cσ_eq_nth_rev.
-    eapply Branch_trans. apply H2β. easy.
+    eapply branch_trans. now apply nth_Cσ_eq_nth_rev.
+    eapply branch_trans. apply H2β. easy.
   + exists β; repeat split. easy. easy.
-    eapply Branch_trans. now apply nth_Cσ_eq_nth_rev. easy.
+    eapply branch_trans. now apply nth_Cσ_eq_nth_rev. easy.
 - (* Injective *)
   intros α1 α2; apply classic_contra; intros. apply C_neq in H as [i Hi].
   apply nth_Cσ_inj with (σ:=σ)(s:=[]) in Hi as [n Hn].

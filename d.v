@@ -25,7 +25,7 @@ apply C_neq in Hαγ as [n Hn]. destruct (Hγ (S n)) as [β [Hγβ [Hβ Hj]]].
 (* Now β is apart from α but still in the desired branch. *)
 exists β; repeat split. apply C_neq; exists n. rewrite <-Hj. easy. lia. easy.
 assert(m <= n). { apply not_gt. intros H'. now apply Hi in H'. }
-eapply Branch_trans. apply Hi. eapply Branch_restrict. 2: apply Hj. auto.
+eapply branch_trans. apply Hi. eapply branch_incl. 2: apply Hj. auto.
 Qed.
 
 (* A countable union of closed sets is closed. *)
@@ -41,7 +41,7 @@ Theorem closed_complement X α :
   Closed X -> ¬X α -> ∃m, X ∩ Branch m α = ∅.
 Proof.
 intros HX Hα. apply not_all_not_ex; intros Hn. apply Hα, HX.
-intros m. destruct (not_empty _ _ (Hn m)) as [β [H1β H2β]]; exists β.
+intros m; assert(Hm := Hn m). apply not_empty in Hm as [β [H1β H2β]]; exists β.
 repeat split. intros H; now subst. all: easy.
 Qed.
 
@@ -61,15 +61,15 @@ intros α [H1α H2α]. apply not_all_ex_not in H2α as [m Hm].
 destruct (pre_decode_surj m α) as [n [H1n H2n]]; exists n.
 (* This implies P for the image of f. *)
 assert(Hfn : ∃β, P (pre_decode n) β). { exists α; split. easy.
-  rewrite H1n. apply Branch_sym, H2n. }
+  rewrite H1n. apply branch_sym, H2n. }
 apply Hf in Hfn as [H3n H4n]; rewrite H1n in H4n.
 (* If f (pre_decode n) ≠ α, then Hm gives a contradiction. *)
 apply NNPP; intros H5n; apply Hm. exists (f (pre_decode n)); repeat split.
-auto. easy. eapply Branch_trans. apply H2n. easy.
+auto. easy. eapply branch_trans. apply H2n. easy.
 Qed.
 
-(* countable_diff_D can be proved without choice, with some extra trouble. *)
-Theorem countable_diff_D_again X :
+(* countable_diff_D can be proved without choice. *)
+Theorem countable_diff_D_nochoice X :
   Countable (X ⧵ D X).
 Proof.
 (* Under every branch we follow the least element of X, or default to zero. *)

@@ -60,12 +60,12 @@ intros Hpos Hneg x. destruct (classic (P x)) as [H|H].
   intros x' [Hx'|Hx']. easy. now apply H2y.
 Qed.
 
-(* A function relation based on a function. *)
-Lemma fn_rel_fn (f : X -> Y) x : ∃!y, y = f x.
-Proof. now exists (f x). Qed.
-
 (* A function relation based on a constant. *)
 Lemma fn_rel_const (c : Y) : ∃!y, y = c.
 Proof. now exists c. Qed.
+
+(* A function relation based on a function. *)
+Lemma fn_rel_fn (f : X -> Y) x : ∃!y, y = f x.
+Proof. now exists (f x). Qed.
 
 End Function_relations.

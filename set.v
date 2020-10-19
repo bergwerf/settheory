@@ -90,7 +90,7 @@ Variable U : P X.
 
 (* Set inclusion is transitive *)
 Lemma incl_trans : U ⊆ V -> V ⊆ W -> U ⊆ W.
-Proof. intros HU HV α; auto. Qed.
+Proof. intros HU HV x; auto. Qed.
 
 (* Equal sets are included in each other. *)
 Lemma eq_incl : V = W -> V ⊆ W /\ W ⊆ V.
@@ -100,15 +100,6 @@ Proof. intros; now subst. Qed.
 Lemma incl_eq : V ⊆ W -> W ⊆ V -> V = W.
 Proof. intros; apply prop_ext; split; auto. Qed.
 
-(* A non-empty set contains an element. *)
-Lemma not_empty :
-  V ≠ ∅ -> ∃x, V x.
-Proof.
-intros. apply not_all_not_ex; intros H'; apply H.
-apply prop_ext; intros; split; unfold EmptySet; intros.
-now apply (H' x). easy.
-Qed.
-
 (*
 If V is included in U, and W removes at least as much from U as V,
 then V is included in W.
@@ -116,10 +107,10 @@ then V is included in W.
 Lemma diff_incl :
   V ⊆ U -> U ⧵ W ⊆ U ⧵ V -> V ⊆ W.
 Proof.
-intros HVU H α HV. apply HVU in HV as HU.
-assert(Hα := H α). eapply contra in Hα; unfold Difference in *.
-apply not_and_or in Hα as [Hα|Hα]. easy. now apply NNPP.
-now intros [_ HVα].
+intros HVU H x HV. apply HVU in HV as HU.
+assert(Hx := H x). eapply contra in Hx; unfold Difference in *.
+apply not_and_or in Hx as [Hx|Hx]. easy. now apply NNPP.
+now intros [_ HVx].
 Qed.
 
 End Basic_lemmas.
@@ -133,9 +124,45 @@ Variable W : P X.
 Variable U : P X.
 Variable Y : nat -> P X.
 
+(* A set is non-empty iff it contains an element. *)
+Lemma not_empty :
+  V ≠ ∅ <-> ∃x, V x.
+Proof.
+split.
+- intros H; apply not_all_not_ex; intros H'; apply H.
+  apply prop_ext; intros; split; unfold EmptySet; intros.
+  now apply (H' x). easy.
+- intros [x Hx] H; apply eq_incl in H as [H _].
+  now apply (H x).
+Qed.
+
 (* The difference of V relative to ∅ is all of V. *)
 Lemma diff_empty : V ⧵ ∅ = V.
-Proof. apply incl_eq. now intros α [H _]. easy. Qed.
+Proof. apply incl_eq. now intros x [H _]. easy. Qed.
+
+(* The empty set does not add any elements. *)
+Lemma union_empty : V ∪ ∅ = V.
+Proof. apply incl_eq. now intros x [H|H]. intros x H; now left. Qed.
+
+(* If V is included in W, and W is empty, then V is empty. *)
+Lemma incl_empty : V ⊆ W -> W = ∅ -> V = ∅.
+Proof. intros HV HW; apply incl_eq. now rewrite <-HW. easy. Qed.
+
+(* Intersection distributes over union. *)
+Lemma isect_distr_union :
+  (V ∪ W) ∩ U = (V ∩ U) ∪ (W ∩ U).
+Proof.
+apply incl_eq; intros x.
+- intros [[HV|HW] HU]. now left. now right.
+- intros [[HV HU]|[HW HU]]; split; try easy. now left. now right.
+Qed.
+
+(*
+If V is included in W, then the intersection between
+V and U is included in the intersection between W and U.
+*)
+Lemma incl_isect_incl : V ⊆ W -> V ∩ U ⊆ W ∩ U.
+Proof. intros HV x [H1x H2x]. split; auto. Qed.
 
 (*
 Removing only shared elements is equal to
@@ -145,8 +172,8 @@ Lemma diff_ωisect_eq_ωunion_diff :
   V ⧵ ⋂ Y = ⋃ (λ n, V ⧵ Y n).
 Proof.
 apply incl_eq.
-- intros α [H1α H2α]. apply not_all_ex_not in H2α as [n Hn]; now exists n.
-- intros α [n [H1n H2n]]; split. easy. apply ex_not_not_all; now exists n.
+- intros x [H1x H2x]. apply not_all_ex_not in H2x as [n Hn]; now exists n.
+- intros x [n [H1n H2n]]; split. easy. apply ex_not_not_all; now exists n.
 Qed.
 
 (*
@@ -156,9 +183,9 @@ is equal to removing all elements in W and adding the elements not in V back.
 Lemma diff_union :
   V ⊆ W -> W ⊆ U -> U ⧵ V = (U ⧵ W) ∪ (W ⧵ V).
 Proof.
-intros HV HW; apply incl_eq; intros α.
-- intros [H1α H2α]. destruct (classic (W α)). now right. now left.
-- intros [[H1α H2α]|[H1α H2α]]; split; try easy.
+intros HV HW; apply incl_eq; intros x.
+- intros [H1x H2x]. destruct (classic (W x)). now right. now left.
+- intros [[H1x H2x]|[H1x H2x]]; split; try easy.
   eapply contra. apply HV. easy. now apply HW.
 Qed.
 
@@ -169,9 +196,9 @@ Proof.
 intros [v Hv] [w Hw].
 pose(f c m := if c =? 0 then v m else w m).
 pose(g n := let (c, m) := π_inv n in f c m).
-exists g; intros α [Hα|Hα].
-1: destruct (Hv α Hα) as [m Hm]; exists (π (0, m)).
-2: destruct (Hw α Hα) as [m Hm]; exists (π (1, m)).
+exists g; intros x [Hx|Hx].
+1: destruct (Hv x Hx) as [m Hm]; exists (π (0, m)).
+2: destruct (Hw x Hx) as [m Hm]; exists (π (1, m)).
 all: unfold g, f; now rewrite π_inv_π_id.
 Qed.
 
@@ -181,7 +208,7 @@ Lemma countable_ωunion :
 Proof.
 intros; apply choice in H as [F HY].
 pose(f n := let (i, m) := π_inv n in F i m).
-exists f; intros α [i Hα]. apply HY in Hα as [m Hm].
+exists f; intros x [i Hx]. apply HY in Hx as [m Hm].
 exists (π (i, m)); unfold f; now rewrite π_inv_π_id.
 Qed.
 

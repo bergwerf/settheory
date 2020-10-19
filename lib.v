@@ -29,6 +29,9 @@ Section Logic.
 Variable P : Prop.
 Variable Q : Prop.
 
+Theorem PNNP : P -> ¬¬P.
+Proof. auto. Qed.
+
 Theorem contra : (P -> Q) -> ¬Q -> ¬P.
 Proof. auto. Qed.
 

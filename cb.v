@@ -107,11 +107,11 @@ symmetry; apply incl_eq.
   rewrite diff_ωisect_eq_ωunion_diff; exists n. split. easy.
   (* Use HY to show that Y_n is indeed disjoint from α. *)
   assert(Hn' : ∃Y', CB_Disjoint (pre_decode n) Y'). { exists Z; split.
-    easy. erewrite Branch_eq. 2: apply Branch_sym, Hn. easy. }
+    easy. erewrite branch_eq. 2: apply branch_sym, Hn. easy. }
   apply HY in Hn' as [_ HYn]; apply eq_incl in HYn as [HYn _].
   (* We use that α ∈ Y n implies α ∈ ∅. *)
   intros Hα; apply (HYn α); split. easy.
-  now apply Branch_sym.
+  now apply branch_sym.
 Qed.
 
 (* The kernel contains no isolated points. *)
