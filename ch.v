@@ -312,7 +312,7 @@ Qed.
 Lemma andb_forall_true f : (∀b, f b = true) -> f false && f true = true.
 Proof. intros H; now rewrite ?H. Qed.
 
-Lemma bool_double_neq (a b c : bool) : a ≠ b -> a ≠ c -> b = c.
+Lemma bool_triangle (a b c : bool) : a ≠ b -> a ≠ c -> b = c.
 Proof. now destruct a, b, c. Qed.
 
 (* Every prefix in X eventually splits. *)
@@ -324,10 +324,10 @@ destruct (H3α (length s)) as [β [H1β [H2β H3β]]].
 apply C_neq in H1β as [i' Hi'];
 apply find_first_split in Hi' as [i [_ [H1i H2i]]].
 (* Construct a continuation using induction on i - length s. *)
-assert(i >= length s). { apply not_lt; intros H. now apply H3β in H. }
+assert(i >= length s). { apply not_lt; intros H. now apply H2β in H. }
 remember (i - length s) as n; assert(i = length s + n) by lia.
-rewrite H0 in H1i, H2i; clear H3α H3β H Heqn H0 i i'.
-revert H1α H2α H1i H2i H2β; revert s. induction n; intros.
+rewrite H0 in H1i, H2i; clear H3α H2β H Heqn H0 i i'.
+revert H1α H2α H1i H2i H3β; revert s. induction n; intros.
 - (* We are at the 2-way point. *)
   exists []; rewrite app_nil_l; rewrite add_0_r in *.
   apply andb_forall_true with (f:=λ b, σ (b :: s)).
@@ -335,7 +335,7 @@ revert H1α H2α H1i H2i H2β; revert s. induction n; intros.
   + exists α; split. easy. now apply branch_S_nth_rev.
   + exists β; split. easy. apply branch_S_nth_rev.
     eapply branch_trans. apply H2α. easy.
-    eapply bool_double_neq. apply H2i. easy.
+    eapply bool_triangle. apply H2i. easy.
 - (* We take a 1-way step. *)
   pose(b := α (length s)); pose(t := b :: s).
   assert(length s + S n = length t + n) by (simpl; now rewrite <-add_succ_r).
@@ -363,11 +363,13 @@ exists (nth_Cσ σ []); split.
   rewrite Cσ_length in H2β; simpl in H2β.
   destruct (H3β m) as [γ [H1γ [H2γ H3γ]]].
   destruct (classic (nth_Cσ σ [] α = β)).
-  + exists γ; repeat split. now rewrite H. easy.
+  + exists γ; repeat split. now rewrite H.
     eapply branch_trans. now apply nth_Cσ_eq_nth_rev.
-    eapply branch_trans. apply H2β. easy.
-  + exists β; repeat split. easy. easy.
-    eapply branch_trans. now apply nth_Cσ_eq_nth_rev. easy.
+    eapply branch_trans. apply H2β.
+    easy. easy.
+  + exists β; repeat split. easy.
+    eapply branch_trans. now apply nth_Cσ_eq_nth_rev.
+    easy. easy.
 - (* Injective *)
   intros α1 α2; apply classic_contra; intros. apply C_neq in H as [i Hi].
   apply nth_Cσ_inj with (σ:=σ)(s:=[]) in Hi as [n Hn].

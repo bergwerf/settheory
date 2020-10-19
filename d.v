@@ -3,7 +3,7 @@
 From set_theory Require Import lib fn bin set.
 
 (* All non-isolated points: distinct points exist within any branch of α. *)
-Definition D (X : P C) α := ∀m, ∃β, α ≠ β /\ X β /\ Branch m α β.
+Definition D (X : P C) α := ∀m, ∃β, α ≠ β /\ (Branch m α ∩ X) β.
 
 (* Limit of any set transformer. *)
 Definition Lim (F : P C -> P C) X := ⋂ (λ n, (F ↑ n) X).
@@ -19,13 +19,13 @@ Theorem closed_D X :
   Closed (D X).
 Proof.
 (* First find γ ∈ D(X) in the desired branch of α. *)
-intros α Hα m. destruct (Hα m) as [γ [Hαγ [Hγ Hi]]].
+intros α Hα m. destruct (Hα m) as [γ [Hαγ [Hm Hγ]]].
 (* Find  where γ splits from α, and find β ∈ X in this branch. *)
-apply C_neq in Hαγ as [n Hn]. destruct (Hγ (S n)) as [β [Hγβ [Hβ Hj]]].
+apply C_neq in Hαγ as [n Hn]. destruct (Hγ (S n)) as [β [Hγβ [H1β H2β]]].
 (* Now β is apart from α but still in the desired branch. *)
-exists β; repeat split. apply C_neq; exists n. rewrite <-Hj. easy. lia. easy.
-assert(m <= n). { apply not_gt. intros H'. now apply Hi in H'. }
-eapply branch_trans. apply Hi. eapply branch_incl. 2: apply Hj. auto.
+exists β; repeat split. apply C_neq; exists n. rewrite <-H1β. easy. lia.
+assert(m <= n). { apply not_gt. intros H'. now apply Hm in H'. }
+eapply branch_trans. apply Hm. eapply branch_incl. 2: apply H1β. auto. easy.
 Qed.
 
 (* A countable union of closed sets is closed. *)
@@ -33,7 +33,7 @@ Theorem closed_ωisect X :
   (∀n, Closed (X n)) -> Closed (⋂ X).
 Proof.
 intros H α Hα n. apply H. intros m.
-destruct (Hα m) as [β Hβ]; now exists β.
+destruct (Hα m) as [β [H1β [H2β H3β]]]; now exists β.
 Qed.
 
 (* An element in the complement of a closed set has a disjoint branch. *)
@@ -49,33 +49,11 @@ Qed.
 Theorem countable_diff_D X :
   Countable (X ⧵ D X).
 Proof.
-(* The easiest approach is to `choose' a point in X under every branch. *)
-pose(P s β := X β /\ Branch (fst s) (snd s) β).
-assert(∀s, ∃α, (∃β, P s β) -> P s α). {
-  intros. destruct (classic (∃β, P s β)) as [[β Hβ]|Hβ].
-  now exists β. now exists zeros. }
-(* If we choose α ∈ X at every branch, we also reach all isolated points. *)
-destruct (choice _ H) as [f Hf]. exists (λ n, f (pre_decode n)).
-(* Find m such that α is the only element of Branch m α. *)
-intros α [H1α H2α]. apply not_all_ex_not in H2α as [m Hm].
-destruct (pre_decode_surj m α) as [n [H1n H2n]]; exists n.
-(* This implies P for the image of f. *)
-assert(Hfn : ∃β, P (pre_decode n) β). { exists α; split. easy.
-  rewrite H1n. apply branch_sym, H2n. }
-apply Hf in Hfn as [H3n H4n]; rewrite H1n in H4n.
-(* If f (pre_decode n) ≠ α, then Hm gives a contradiction. *)
-apply NNPP; intros H5n; apply Hm. exists (f (pre_decode n)); repeat split.
-auto. easy. eapply branch_trans. apply H2n. easy.
-Qed.
-
-(* countable_diff_D can be proved without choice. *)
-Theorem countable_diff_D_nochoice X :
-  Countable (X ⧵ D X).
-Proof.
 (* Under every branch we follow the least element of X, or default to zero. *)
+(* We could also use the choice axiom for a shorter proof. *)
 pose(Stick m α i b :=
   (Branch m α ∩ X = ∅ /\ b = false) \/
-  (Branch m α ∩ X ≠ ∅ /\ ∃β, MinBranch (Branch m α) (S i) β /\ b = β i)).
+  (Branch m α ∩ X ≠ ∅ /\ ∃β, MinBranch (Branch m α ∩ X) (S i) β /\ b = β i)).
 pose(F m α i b := (i < m /\ b = α i) \/ (¬(i < m) /\ Stick m α i b)).
 pose(G n := let (m, α) := pre_decode n in F m α).
 (* Prove that G is a function relation. *)
@@ -84,14 +62,32 @@ assert(G_func : ∀p, ∃!b, G (fst p) (snd p) b). { intros [n i]; simpl.
   revert i; apply fn_rel_lem; intros i _. apply fn_rel_fn.
   revert i; apply fn_rel_lem; intros i Hi. apply fn_rel_const.
   (* Obtain the smallest branch at depth S i. *)
-  admit. }
+  destruct (min_branch_ex (Branch m α ∩ X) (S i)) as [β Hβ]. easy.
+  exists (β i); split. now exists β. intros b [γ [Hγ R]]; subst b.
+  eapply min_branch_unique. apply Hβ. apply Hγ. lia. }
 (* Now we can turn G into a function. *)
 apply unique_choice in G_func as [g Hg]; exists (λ n i, g (n, i)).
-(* Find m such that α is the only element of Branch m α. *)
+(* Find m such that α is the only element in Branch m α ∩ X. *)
 intros α [H1α H2α]; apply not_all_ex_not in H2α as [m Hm].
 destruct (pre_decode_surj m α) as [n [H1n H2n]]; exists n.
-(* Show that g must follow α since it is the only element in this branch. *)
-Abort.
+assert(Branch m α ∩ X = Singleton α). {
+  apply incl_eq; unfold Singleton; intros β Hβ.
+  apply NNPP; intros H. apply Hm; now exists β.
+  subst β; split. apply branch_refl. easy. }
+(* Now g must follow α since it is the only element in this branch. *)
+extensionality i; assert(Hi := Hg (n, i)); remember (g (n, i)) as b.
+simpl in Hi; unfold G in Hi; destruct (pre_decode n) as [k β]; unfold F in Hi.
+simpl in H1n, H2n; subst k. destruct Hi as [[H1i H2i]|[_ Hi]].
+- (* b coincides with the pre_decode branch. *)
+  rewrite H2i; symmetry. now apply H2n.
+- (* b must stick to α. *)
+  apply branch_sym in H2n.
+  unfold Stick in Hi; destruct Hi as [[Hi _]|[_ [γ [Hγ R]]]].
+  exfalso; apply eq_incl in Hi as [Hi _]; now apply (Hi α).
+  rewrite R. erewrite branch_eq, H in Hγ; try easy.
+  destruct Hγ as [Hγ _]. apply not_empty in Hγ as [δ [H1δ H2δ]].
+  rewrite H2δ; apply H1δ. lia.
+Qed.
 
 (* Now we start building examples of derived sets. *)
 Section Examples.
@@ -128,10 +124,10 @@ apply incl_eq; unfold Singleton; intros α Hα.
   + apply C_neq; exists m. unfold shift_branch, shift, pre.
     rewrite ltb_irrefl; replace (m - m <? 1) with true by b_lia.
     now unfold zeros, ones.
-  + (* [shift_branch m zeros] is in (D ↑ n) (Shifts X). *)
-    admit.
   + intros i Hi. unfold shift_branch, shift.
     now replace (i <? m) with true by b_lia.
+  + (* [shift_branch m zeros] is in (D ↑ n) (Shifts X). *)
+    admit.
 Abort.
 
 (* Take the limit of D once. *)

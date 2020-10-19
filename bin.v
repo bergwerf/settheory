@@ -237,12 +237,12 @@ Qed.
 Lemma min_branch_unique m α β :
   MinBranch m α -> MinBranch m β -> Branch m α β.
 Proof.
-intros Hα Hβ; induction m. easy.
-assert(Branch m α β) by (apply IHm; now apply min_branch_incl).
-intros i Hi; apply lt_S in Hi as [Hi|Hi]. now apply H.
-subst. destruct (α m) eqn:A, (β m) eqn:B; try easy; exfalso.
-- apply Hβ, Hα. exists m; repeat split; try easy. lia. now apply branch_sym.
-- apply Hα, Hβ. exists m; repeat split; try easy. lia.
+intros Hα Hβ; apply NNPP; intros H.
+apply not_all_ex_not in H as [i Hi]; apply imply_to_and in Hi as [H1i H2i].
+apply find_first_split in H2i as [n [H1n [H2n H3n]]].
+destruct (α n) eqn:A, (β n) eqn:B; try easy; clear H3n; exfalso.
+- apply Hβ, Hα. exists n; repeat split; try easy. lia. now apply branch_sym.
+- apply Hα, Hβ. exists n; repeat split; try easy. lia.
 Qed.
 
 (* BranchLt successor cases. *)
