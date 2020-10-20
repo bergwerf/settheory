@@ -86,7 +86,6 @@ Definition WOSIsomorphism {V W _0 _1} (A : wos V _0) (B : wos W _1) f :=
 
 Notation "A ↾ x" := (wos_initial_segment A x)(at level 90, format "A ↾ x").
 Notation "A ≅ B" := (∃f, WOSIsomorphism A B f)(at level 100).
-Notation "A ≺ B" := (∃x, A↾x ≅ B)(at level 100).
 
 Lemma wos_total {V _0} (A : wos V _0) x y :
   x ≠ y -> x <_0` y \/ y <_0` x.
@@ -162,6 +161,9 @@ assert(Hft := sig2 (f sx)); simpl in Hft.
 rewrite H in Hft; simpl in Hft.
 now apply irreflexive in Hft.
 Qed.
+
+(* Because of the previous theorem we may now define this. *)
+Notation "A ≺ B" := (∃x, A ≅ B↾x)(at level 100).
 
 (* Creating ever larger well-orderings of the natural numbers. *)
 Section Larger_lexicographic_ordenings.
