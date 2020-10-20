@@ -2,12 +2,15 @@
 
 From set_theory Require Import lib fn set.
 
+(* This is just a trick to get nice notations. *)
+Definition Lt {X} (lt : X -> X -> Prop) x y := lt x y.
+
 (* Well-Ordering Structure *)
 Record wos (X : Type) (lt : X -> X -> Prop) := Well_order {
-  irreflexive  : ∀x, ¬(lt x x);
-  transitive   : ∀x y z, lt x y -> lt y z -> lt x z;
-  total        : ∀x y, lt x y \/ x = y \/ lt y x;
-  wellorder    : ∀V : P X, V ≠ ∅ -> ∃x, V x /\ ∀y, lt y x -> ¬V y;
+  irreflexive  : ∀x, ¬(Lt lt x x);
+  transitive   : ∀x y z, Lt lt x y -> Lt lt y z -> Lt lt x z;
+  total        : ∀x y, Lt lt x y \/ x = y \/ Lt lt y x;
+  wellorder    : ∀W : P X, W ≠ ∅ -> ∃x, W x /\ ∀y, Lt lt y x -> ¬W y;
 }.
 
 Arguments exist {_ _}.
@@ -16,83 +19,125 @@ Arguments transitive {_ _}.
 Arguments total {_ _}.
 Arguments wellorder {_ _}.
 
-Definition lt {X lt} (A : wos X lt) := lt.
-
-Notation "x '≺_' A '`' y" := (lt A x y)
-  (at level 70, A at next level, format "x  '≺_' A '`'  y").
+Notation "x '≺' lt '`' y" := (Lt lt x y)
+  (at level 70, lt at next level, format "x  '≺' lt '`'  y").
 
 (* A progressive property of a well-order is universal. *)
-Theorem wos_ind {X lt} (A : wos X lt) (V : P X) :
-  (∀x, (∀y, y ≺_A` x -> V y) -> V x) -> ∀x, V x.
+Theorem wos_ind {V _0} (A : wos V _0) (P : P V) :
+  (∀x, (∀y, y ≺_0` x -> P y) -> P x) -> ∀x, P x.
 Proof.
 (* This is the contra-position of wellorder on the complement of V. *)
-pose(Vneg x := ¬V x); intros HV.
-assert(HVneg : ¬(Vneg ≠ ∅)). {
-  apply (contra _ _ (wellorder A Vneg)).
+pose(Q x := ¬P x); intros HP.
+assert(HQ : ¬(Q ≠ ∅)). {
+  apply (contra _ _ (wellorder A Q)).
   apply all_not_not_ex; intros x [H1x H2x].
-  apply H1x, HV; intros. now apply NNPP, H2x. }
-apply NNPP in HVneg; apply eq_incl in HVneg as [HVneg _].
-intros x; destruct (classic (V x)). easy. now apply HVneg in H.
+  apply H1x, HP; intros. now apply NNPP, H2x. }
+apply NNPP in HQ; apply eq_incl in HQ as [HQ _].
+intros x; apply NNPP; intros H. now apply HQ in H.
 Qed.
 
 (* A well-order has no infinite decreasing chains. *)
-Theorem wos_no_infinite_descent {X lt} (A : wos X lt) (f : nat -> X) :
-  ¬∀n, f (S n) ≺_A` f n.
+Theorem wos_no_infinite_descent {V _0} (A : wos V _0) (f : nat -> V) :
+  ¬∀n, f (S n) ≺_0` f n.
 Proof.
-pose(V x := ∃n, x = f n).
-assert(V ≠ ∅) by (apply not_empty; exists (f 0); now exists 0).
-apply (wellorder A) in H as [x [[n Hn] Hx]]; subst.
-intros H; eapply Hx. apply H. now exists (S n).
+pose(P x := ∃n, x = f n).
+assert(P ≠ ∅) by (apply not_empty; exists (f 0); now exists 0).
+apply (wellorder A) in H as [x [[i Hi] Hx]]; subst.
+intros H; eapply Hx. apply H. now exists (S i).
 Qed.
 
 (* Prefix of a well-ordering structure. *)
 Section WOS_prefix.
 
-Variable X : Type.
-Variable lt : X -> X -> Prop.
-Variable A : wos X lt.
-Variable bound : X.
+Variable V : Type.
+Variable _0 : V -> V -> Prop.
+Variable A : wos V _0.
+Variable t : V.
 
-Definition wos_pre_prec (x y : {x : X | x ≺_A` bound}) :=
-  proj1_sig x ≺_A` proj1_sig y.
+Definition wpre_lt (x y : {x : V | x ≺_0` t}) :=
+  proj1_sig x ≺_0` proj1_sig y.
 
 Definition wos_pre :
-  wos {x : X | x ≺_A` bound} wos_pre_prec.
+  wos {x : V | x ≺_0` t} wpre_lt.
 Proof.
-apply Well_order; unfold wos_pre_prec; intros.
+apply Well_order; unfold wpre_lt; intros.
 - destruct x; simpl. apply (irreflexive A).
 - destruct x, y, z; simpl. now apply (transitive A) with (y:=x0).
 - destruct x, y; simpl; destruct (total A x x0) as [H|[H|H]].
   now left. right; left; subst. now rewrite (proof_irrelevance _ l l0).
   now right; right.
-- pose(V' x := ∃H : x ≺_A` bound, V (exist x H)).
-  assert(H' : V' ≠ ∅). {
+- pose(U x := ∃H : x ≺_0` t, W (exist x H)).
+  assert(HU : U ≠ ∅). {
     apply not_empty in H as [[x H1x] H2x].
     apply not_empty; exists x; now exists H1x. }
-  apply (wellorder A) in H' as [x [[H1x H2x] H3x]].
+  apply (wellorder A) in HU as [x [[H1x H2x] H3x]].
   exists (exist x H1x); split. easy. intros [y H1y] H2y; simpl in H2y.
   apply H3x in H2y. intros Hneg; apply H2y; now exists H1y.
 Defined.
 
 End WOS_prefix.
 
-Definition WOSIsomorphism {V W lt0 lt1} (A : wos V lt0) (B : wos W lt1) f :=
-  Bijective f /\ ∀x y, x ≺_A` y <-> f x ≺_B` f y.
+Arguments wpre_lt {_}.
 
-Definition WOSIsomorphic {V W lt0 lt1} (A : wos V lt0) (B : wos W lt1) :=
+Definition WOSIsomorphism {V W _0 _1} (A : wos V _0) (B : wos W _1) f :=
+  Bijective f /\ ∀x y, x ≺_0` y <-> f x ≺_1` f y.
+
+Definition WOSIsomorphic {V W _0 _1} (A : wos V _0) (B : wos W _1) :=
   ∃f, WOSIsomorphism A B f.
 
 Notation "A ↾ x" := (wos_pre _ _ A x)(at level 90, format "A ↾ x").
 Notation "A ≅ B" := (WOSIsomorphic A B)(at level 100).
 
+Lemma wos_total {V _0} (A : wos V _0) x y :
+  x ≠ y -> x ≺_0` y \/ y ≺_0` x.
+Proof.
+intros Hneq; destruct (total A x y) as [H|[H|H]].
+now left. easy. now right.
+Qed.
+
 (* The only automorphism of a well-order is the identity. *)
-Theorem wos_automorphism_id {V lt} (A : wos V lt) f :
+Theorem wos_automorphism_id {V _0} (A : wos V _0) f :
   WOSIsomorphism A A f -> f = id.
 Proof.
-Abort.
+intros [[g [_ Hg]] f_iso]; extensionality x; unfold id; revert x.
+apply (wos_ind A); intros x IH. apply NNPP; intros H.
+apply (wos_total A) in H as [H|H].
+- apply IH in H as H1; apply f_iso in H as H2.
+  rewrite H1 in H2; now apply irreflexive in H2.
+- rewrite <-Hg in H at 1; apply f_iso in H.
+  apply IH in H as H1; rewrite Hg in H1.
+  rewrite <-H1 in H; now apply irreflexive in H.
+Qed.
 
-(* A well-order is not isomorphic with any prefix. *)
-Theorem wos_pre_not_isomorphic {V lt} (A : wos V lt) x :
-  ¬(A ≅ A↾x).
+(* A well-order is not isomorphic with a prefix of itself. *)
+Theorem wos_pre_not_isomorphic {V _0} (A : wos V _0) t :
+  ¬(A ≅ A↾t).
 Proof.
+intros [f [[g [_ Hg]] f_iso]].
+unfold wpre_lt, Lt at 2 in f_iso; simpl in f_iso.
+(* This is very similar to wos_automorphism_id. *)
+assert(∀x, sig1 (f x) = x). {
+  apply (wos_ind A); intros x IH. apply NNPP; intros H.
+  apply (wos_total A) in H as [H|H].
+  - apply IH in H as H1; apply f_iso in H as H2.
+    rewrite H1 in H2; now apply irreflexive in H2.
+  - assert(Hx : x ≺_0` t). {
+      destruct (f x) as [fx Hfx]; simpl in H.
+      eapply (transitive A). apply H. apply Hfx. }
+    pose(x' := exist x Hx : {x : V | x ≺_0` t}).
+    assert(x = sig1 (f (g x'))) by now rewrite Hg.
+    rewrite H0 in H at 1; apply f_iso in H.
+    apply IH in H as H1; rewrite Hg in H1.
+    rewrite <-H1 in H; now apply irreflexive in H. }
+(* Now we essentially contradict the bijective property of f. *)
+assert(Hft := sig2 (f t)); simpl in Hft.
+rewrite H in Hft. now apply irreflexive in Hft.
+Qed.
+
+(* Two different prefixes of a well-order are not isomorphic. *)
+Theorem wos_pre_pre_not_isomorphic {V _0} (A : wos V _0) s t :
+  s ≺_0` t -> ¬(A↾t ≅ A↾s).
+Proof.
+intros Hst [f [[g [_ Hg]] f_iso]].
+unfold wpre_lt, Lt at 3, Lt at 6 in f_iso; simpl in f_iso.
 Abort.

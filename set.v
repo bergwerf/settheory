@@ -234,8 +234,8 @@ Lemma countable_rel_ωunion {X} (Y : nat -> P X) :
   (∀n, CountableRel (Y n)) -> CountableRel (⋃ Y).
 Proof.
 intros H;
-pose(F n := proj1_sig (H n));
-pose(HF n := proj2_sig (H n));
+pose(F n := sig1 (H n));
+pose(HF n := sig2 (H n));
 pose(G x y := let (n, i) := π_inv x in F n i y).
 exists G; split; intros x; unfold G.
 - destruct (π_inv x) as [n i]. apply (proj1 (HF n)).
