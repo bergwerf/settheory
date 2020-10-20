@@ -79,14 +79,15 @@ End WOS_prefix.
 
 Arguments wpre_lt {_}.
 
+(* The well-order A is isomorphic to B. *)
 Definition WOSIsomorphism {V W _0 _1} (A : wos V _0) (B : wos W _1) f :=
   Bijective f /\ ∀x y, x ≺_0` y <-> f x ≺_1` f y.
 
-Definition WOSIsomorphic {V W _0 _1} (A : wos V _0) (B : wos W _1) :=
+Definition WOSCong {V W _0 _1} (A : wos V _0) (B : wos W _1) :=
   ∃f, WOSIsomorphism A B f.
 
 Notation "A ↾ x" := (wos_pre _ _ A x)(at level 90, format "A ↾ x").
-Notation "A ≅ B" := (WOSIsomorphic A B)(at level 100).
+Notation "A ≅ B" := (WOSCong A B)(at level 100).
 
 Lemma wos_total {V _0} (A : wos V _0) x y :
   x ≠ y -> x ≺_0` y \/ y ≺_0` x.
@@ -110,11 +111,11 @@ apply (wos_total A) in H as [H|H].
 Qed.
 
 (* A well-order is not isomorphic with a prefix of itself. *)
-Theorem wos_pre_not_isomorphic {V _0} (A : wos V _0) t :
+Theorem wos_ncong_pre {V _0} (A : wos V _0) t :
   ¬(A ≅ A↾t).
 Proof.
 intros [f [[g [_ Hg]] f_iso]].
-unfold wpre_lt, Lt at 2 in f_iso; simpl in f_iso.
+unfold wpre_lt, Lt at 2 in f_iso.
 (* This is very similar to wos_automorphism_id. *)
 assert(∀x, sig1 (f x) = x). {
   apply (wos_ind A); intros x IH. apply NNPP; intros H.
@@ -122,22 +123,43 @@ assert(∀x, sig1 (f x) = x). {
   - apply IH in H as H1; apply f_iso in H as H2.
     rewrite H1 in H2; now apply irreflexive in H2.
   - assert(Hx : x ≺_0` t). {
-      destruct (f x) as [fx Hfx]; simpl in H.
-      eapply (transitive A). apply H. apply Hfx. }
-    pose(x' := exist x Hx : {x : V | x ≺_0` t}).
-    assert(x = sig1 (f (g x'))) by now rewrite Hg.
-    rewrite H0 in H at 1; apply f_iso in H.
-    apply IH in H as H1; rewrite Hg in H1.
+      eapply (transitive A). apply H. apply (sig2 (f x)). }
+    pose(xt := exist x Hx : {x : V | x ≺_0` t}).
+    replace x with (sig1 (f (g xt))) in H at 1 by now rewrite Hg.
+    apply f_iso in H. apply IH in H as H1; rewrite Hg in H1.
     rewrite <-H1 in H; now apply irreflexive in H. }
-(* Now we essentially contradict the bijective property of f. *)
+(* Now we find a contradiction. *)
 assert(Hft := sig2 (f t)); simpl in Hft.
 rewrite H in Hft. now apply irreflexive in Hft.
 Qed.
 
 (* Two different prefixes of a well-order are not isomorphic. *)
-Theorem wos_pre_pre_not_isomorphic {V _0} (A : wos V _0) s t :
+Theorem wos_pre_ncong {V _0} (A : wos V _0) s t :
   s ≺_0` t -> ¬(A↾t ≅ A↾s).
 Proof.
 intros Hst [f [[g [_ Hg]] f_iso]].
-unfold wpre_lt, Lt at 3, Lt at 6 in f_iso; simpl in f_iso.
-Abort.
+unfold wpre_lt, Lt at 3, Lt at 6 in f_iso.
+(* This is again very similar to wos_automorphism_id. *)
+assert(∀x, sig1 (f x) = sig1 x). {
+  apply (wos_ind (A↾t)); intros x IH.
+  unfold wpre_lt, Lt at 2 in IH. apply NNPP; intros H.
+  apply (wos_total A) in H as [H|H].
+  - assert(Hfx : sig1 (f x) ≺_0` t). {
+      eapply (transitive A). apply (sig2 (f x)). easy. }
+    pose(fxt := exist (sig1 (f x)) Hfx : {x : V | x ≺_0` t}).
+    replace (sig1 (f x)) with (sig1 (fxt)) in H by easy.
+    apply IH in H as H1; apply f_iso in H as H2.
+    rewrite H1 in H2; now apply irreflexive in H2.
+  - assert(Hx : sig1 x ≺_0` s). {
+      eapply (transitive A). apply H. apply (sig2 (f x)). }
+    pose(xs := exist (sig1 x) Hx : {x : V | x ≺_0` s}).
+    replace (sig1 x) with (sig1 xs) in H by easy.
+    rewrite <-Hg in H at 1; apply f_iso in H.
+    apply IH in H as H1; rewrite Hg in H1.
+    rewrite <-H1 in H; now apply irreflexive in H. }
+(* Now we find a contradiction. *)
+pose(sx := exist s Hst : {x : V | x ≺_0` t}).
+assert(Hft := sig2 (f sx)); simpl in Hft.
+rewrite H in Hft; simpl in Hft.
+now apply irreflexive in Hft.
+Qed.
