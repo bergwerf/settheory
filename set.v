@@ -124,6 +124,10 @@ Variable W : P X.
 Variable U : P X.
 Variable Y : nat -> P X.
 
+(* A set is empty iff it contains no elements. *)
+Lemma empty : V = ∅ <-> ∀x, ¬V x.
+Proof. split; intros. now rewrite H. now apply incl_eq. Qed.
+
 (* A set is non-empty iff it contains an element. *)
 Lemma not_empty :
   V ≠ ∅ <-> ∃x, V x.

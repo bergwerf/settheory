@@ -2,18 +2,80 @@
 
 From set_theory Require Import lib fn pair set.
 
+Arguments exist {_ _}.
+
+(* Equivalent properties of well-orderings. *)
+Section Well_ordering.
+
+Variable X : Type.
+Variable lt : X -> X -> Prop.
+
 (* This is just a trick to get nice notations. *)
-Definition Lt {X} (lt : X -> X -> Prop) x y := lt x y.
+Definition Lt := lt.
+
+(* Well-order 1: each non-empty set as a least member. *)
+Definition wellorder1 := ∀W : P X, W ≠ ∅ -> ∃x, W x /\ ∀y, Lt y x -> ¬W y.
+
+(* Well-order 2: each progressive property is universal. *)
+Definition wellorder2 := ∀P : P X, (∀x, (∀y, Lt y x -> P y) -> P x) -> ∀x, P x.
+
+(* Well-order 3: there is no infinitely decreasing sequence. *)
+Definition wellorder3 := ∀f : nat -> X, ∃n, ¬Lt (f (S n)) (f n).
+
+Theorem wellorder1iff2 :
+  wellorder1 <-> wellorder2.
+Proof.
+(* These statements are each others contraposition. *)
+unfold wellorder1, wellorder2; split; intros H.
+- intros P HP. eapply classic_contra. 2: exact HP. intros HPneg.
+  apply not_all_ex_not, not_empty, H in HPneg as [x [H1x H2x]].
+  apply ex_not_not_all; exists x; intros Hy.
+  apply H1x, Hy. intros; now apply NNPP, H2x.
+- intros W HW. apply not_all_not_ex; eapply contra. 2: exact HW.
+  intros HWneg. apply empty, H; intros x Hx.
+  destruct (not_and_or _ _ (HWneg x)); easy.
+Qed.
+
+Theorem wellorder1iff3 :
+  wellorder1 <-> wellorder3.
+Proof.
+unfold wellorder1, wellorder3; split; intros H.
+- (* Find lower bound in the range of f. *)
+  intros f. assert(Rng f ≠ ∅) by (apply not_empty; now exists (f 0), 0).
+  apply H in H0 as [x [[n Hn] Hx]]; exists n; subst.
+  intros Hn; apply Hx in Hn; apply Hn. now exists (S n).
+- (* Create infinite decreasing sequence using dependent countable choice. *)
+  apply NNPP; intros Hneg; apply not_all_ex_not in Hneg as [W HW].
+  apply imply_to_and in HW as [H1W H2W].
+  apply not_empty in H1W as [v Hv].
+  pose(v0 := exist v Hv).
+  pose(sigW := {x : X | W x}).
+  assert(H3W : ∀x : sigW, ∃y : sigW, Lt (sig1 y) (sig1 x)). {
+    intros [x Hx]. apply not_ex_all_not with (n:=x) in H2W.
+    apply not_and_or in H2W as [H2W|H2W]. easy.
+    apply not_all_ex_not in H2W as [y Hy].
+    apply imply_to_and in Hy as [H1y H2y].
+    apply NNPP in H2y. now exists (exist y H2y). }
+  destruct (DC_fun _ _ H3W v0) as [f [_ Hf]].
+  pose(g n := sig1 (f n)). destruct (H g) as [n Hn].
+  apply Hn; unfold g; apply Hf.
+Qed.
 
 (* Well-Ordering Structure *)
-Record wos (X : Type) (lt : X -> X -> Prop) := Well_order {
-  irreflexive  : ∀x, ¬(Lt lt x x);
-  transitive   : ∀x y z, Lt lt x y -> Lt lt y z -> Lt lt x z;
-  total        : ∀x y, Lt lt x y \/ x = y \/ Lt lt y x;
-  wellorder    : ∀W : P X, W ≠ ∅ -> ∃x, W x /\ ∀y, Lt lt y x -> ¬W y;
-}.
+Definition wos :=
+  (∀x, ¬(Lt x x)) /\
+  (∀x y z, Lt x y -> Lt y z -> Lt x z) /\
+  (∀x y, Lt x y \/ x = y \/ Lt y x) /\
+  wellorder1.
 
-Arguments exist {_ _}.
+Definition irreflexive (A : wos) := proj1 A.
+Definition transitive (A : wos) := proj1 (proj2 A).
+Definition total (A : wos) := proj1 (proj2 (proj2 A)).
+Definition wellorder (A : wos) := proj2 (proj2 (proj2 A)).
+
+End Well_ordering.
+
+Arguments Lt {_}.
 Arguments irreflexive {_ _}.
 Arguments transitive {_ _}.
 Arguments total {_ _}.
@@ -22,28 +84,11 @@ Arguments wellorder {_ _}.
 Notation "x '<' lt '`' y" := (Lt lt x y)
   (at level 70, lt at next level, format "x  '<' lt '`'  y").
 
-(* A progressive property of a well-order is universal. *)
+(* Re-statement of wellorder2. *)
 Theorem wos_ind {V _0} (A : wos V _0) (P : P V) :
   (∀x, (∀y, y <_0` x -> P y) -> P x) -> ∀x, P x.
 Proof.
-(* This is the contra-position of wellorder on the complement of V. *)
-pose(Q x := ¬P x); intros HP.
-assert(HQ : ¬(Q ≠ ∅)). {
-  apply (contra _ _ (wellorder A Q)).
-  apply all_not_not_ex; intros x [H1x H2x].
-  apply H1x, HP; intros. now apply NNPP, H2x. }
-apply NNPP in HQ; apply eq_incl in HQ as [HQ _].
-intros x; apply NNPP; intros H. now apply HQ in H.
-Qed.
-
-(* A well-order has no infinite decreasing chains. *)
-Theorem wos_no_infinite_descent {V _0} (A : wos V _0) (f : nat -> V) :
-  ¬∀n, f (S n) <_0` f n.
-Proof.
-pose(P x := ∃n, x = f n).
-assert(P ≠ ∅) by (apply not_empty; exists (f 0); now exists 0).
-apply (wellorder A) in H as [x [[i Hi] Hx]]; subst.
-intros H; eapply Hx. apply H. now exists (S i).
+apply wellorder1iff2, A.
 Qed.
 
 (* Initial segment of a well-ordering structure. *)
@@ -57,23 +102,24 @@ Variable t : V.
 Definition segment_lt (x y : {x : V | x <_0` t}) :=
   proj1_sig x <_0` proj1_sig y.
 
-Definition wos_initial_segment :
+Theorem wos_initial_segment :
   wos {x : V | x <_0` t} segment_lt.
 Proof.
-apply Well_order; unfold segment_lt; intros.
+unfold segment_lt; repeat split; intros.
 - destruct x; simpl. apply (irreflexive A).
 - destruct x, y, z; simpl. now apply (transitive A) with (y:=x0).
 - destruct x, y; simpl; destruct (total A x x0) as [H|[H|H]].
   now left. right; left; subst. now rewrite (proof_irrelevance _ l l0).
   now right; right.
-- pose(U x := ∃H : x <_0` t, W (exist x H)).
+- intros W H.
+  pose(U x := ∃H : x <_0` t, W (exist x H)).
   assert(HU : U ≠ ∅). {
     apply not_empty in H as [[x H1x] H2x].
     apply not_empty; exists x; now exists H1x. }
   apply (wellorder A) in HU as [x [[H1x H2x] H3x]].
   exists (exist x H1x); split. easy. intros [y H1y] H2y; simpl in H2y.
   apply H3x in H2y. intros Hneg; apply H2y; now exists H1y.
-Defined.
+Qed.
 
 End WOS_initial_segment.
 
@@ -166,6 +212,7 @@ Qed.
 Notation "A ≺ B" := (∃x, A ≅ B↾x)(at level 100).
 
 (* Creating ever larger well-orderings of the natural numbers. *)
+Require Import Wf_nat.
 Section Larger_lexicographic_ordenings.
 
 (* Given is a sequence of well-orderings of the natural numbers. *)
@@ -179,9 +226,23 @@ Definition lex m n :=
   m < n \/ (m = n /\ x <lt n` y).
 
 (* This well-orders the natural numbers. *)
-Definition lex_wos :
+Theorem lex_wos :
   wos nat lex.
 Proof.
+repeat split; unfold Lt, lex; intros;
+try destruct (π_inv x) as [nx x'] eqn:Ex;
+try destruct (π_inv y) as [ny y'] eqn:Ey;
+try destruct (π_inv z) as [nz z'].
+- intros [H|[_ H]]. lia. now apply (irreflexive (A nx)) in H.
+- destruct H as [H1|[H1eq H1]], H0 as [H2|[H2eq H2]]. 1,2,3: left; lia.
+  subst. right; split. easy. eapply (transitive (A nz)). apply H1. apply H2.
+- destruct (lt_eq_lt_dec nx ny) as [[H|H]|H].
+  1: now left; left. 2: now right; right; left. subst.
+  destruct (total (A ny) x' y') as [H|[H|H]].
+  1: now left; right. 2: now right; right; right. subst.
+  right; left. destruct (fn_bi_inj_surj _ _ _ π_inv_bijective) as [Hπ _].
+  eapply Hπ; now rewrite Ex, Ey.
+- (* TBD *)
 Admitted.
 
 (* A_n is isomorphic with an initial segment of the lexicographic ordening. *)

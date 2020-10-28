@@ -10,9 +10,13 @@ Require Export PeanoNat.     (* Peano arithmetic *)
 
 (* Logic *)
 Require Export Classical.
+Require Export ChoiceFacts.
 Require Export ClassicalChoice.
 Require Export PropExtensionality.
 Require Export FunctionalExtensionality.
+
+(* Dependent choice. *)
+Axiom DC_fun : ∀A, FunctionalDependentChoice_on A.
 
 (* Import some theorems into the global namespace. *)
 Export Nat.

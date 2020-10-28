@@ -93,11 +93,8 @@ destruct (π_steps_range k).
 now rewrite <-H, π_π_inv_id.
 Qed.
 
-(* Note that π and its inverse are in principle constructive. *)
-Corollary π_bijective :
-  Bijective π.
-Proof.
-exists π_inv; split.
-apply π_inv_π_id.
-apply π_π_inv_id.
-Qed.
+Corollary π_bijective : Bijective π.
+Proof. exists π_inv; split. apply π_inv_π_id. apply π_π_inv_id. Qed.
+
+Corollary π_inv_bijective : Bijective π_inv.
+Proof. exists π; split. apply π_π_inv_id. apply π_inv_π_id. Qed.
