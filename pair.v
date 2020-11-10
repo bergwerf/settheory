@@ -1,4 +1,4 @@
-(* Cantor's pairing function *)
+(* Cantor's pairing function. *)
 
 From set_theory Require Import lib fn.
 

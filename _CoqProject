@@ -1,7 +1,7 @@
 -R . set_theory
 
 lib.v
-misc.v
+ts.v
 
 fn.v
 pair.v
@@ -9,6 +9,7 @@ set.v
 bin.v
 csb.v
 wo.v
+wot.v
 
 d.v
 cb.v

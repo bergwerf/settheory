@@ -1,6 +1,6 @@
 (* A proof that the continuum hypothesis holds for closed sets. *)
 
-From set_theory Require Import lib misc fn pair bin set d cb.
+From set_theory Require Import lib ts fn pair bin set d cb.
 
 Require Import List.
 Import ListNotations.

@@ -1,4 +1,4 @@
-(* The Cantor-Bendixon derivatives *)
+(* The set of Cantor-Bendixon derivatives. *)
 
 From set_theory Require Import lib fn pair bin set d.
 

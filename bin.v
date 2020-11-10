@@ -1,4 +1,4 @@
-(* Utilities for binary sequences (the Cantor space) *)
+(* Lemmas about binary sequences (the Cantor space). *)
 
 From set_theory Require Import lib fn set.
 

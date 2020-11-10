@@ -1,4 +1,4 @@
-(* The `derived set' containing limit points of a set X : P C *)
+(* The `derived set' with limit points of a set X : P C. *)
 
 From set_theory Require Import lib fn bin set.
 

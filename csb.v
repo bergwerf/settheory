@@ -1,4 +1,4 @@
-(* The Cantor-Schröder-Bernstein theorem *)
+(* The Cantor-Schröder-Bernstein theorem. *)
 
 From set_theory Require Import lib fn set.
 

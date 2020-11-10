@@ -1,4 +1,4 @@
-(* All external imports and some generic tools *)
+(* External imports, general notations, tactics, and some lemmas. *)
 
 (* Convenience *)
 Require Export Lia.          (* Linear Integer Arithmetic tactic *)
@@ -28,23 +28,6 @@ Notation sig2 := proj2_sig.
 Notation "'∃!' x .. y , P" := (exists! x, .. (exists! y, P) ..)
   (at level 200, x binder, y binder, right associativity,
   format "'[ ' '[ ' '∃!' x .. y ']' , '/'  P ']'") : type_scope.
-
-(* Basic laws of logic that are absent in Coq's library. *)
-Section Logic.
-
-Variable P : Prop.
-Variable Q : Prop.
-
-Theorem PNNP : P -> ¬¬P.
-Proof. auto. Qed.
-
-Theorem contra : (P -> Q) -> ¬Q -> ¬P.
-Proof. auto. Qed.
-
-Theorem classic_contra : (¬Q -> ¬P) -> P -> Q.
-Proof. intros; destruct (classic Q). easy. now apply H in H1. Qed.
-
-End Logic.
 
 (*
 Naming conventions
@@ -86,3 +69,20 @@ Ltac bool_to_Prop :=
 
 Ltac b_Prop := repeat bool_to_Prop.
 Ltac b_lia := b_Prop; try (symmetry; b_Prop); lia.
+
+(* Basic laws of logic that are absent in Coq's library. *)
+Section Logic.
+
+Variable P : Prop.
+Variable Q : Prop.
+
+Theorem PNNP : P -> ¬¬P.
+Proof. auto. Qed.
+
+Theorem contra : (P -> Q) -> ¬Q -> ¬P.
+Proof. auto. Qed.
+
+Theorem classic_contra : (¬Q -> ¬P) -> P -> Q.
+Proof. intros; destruct (classic Q). easy. now apply H in H1. Qed.
+
+End Logic.

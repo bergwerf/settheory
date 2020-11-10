@@ -1,4 +1,4 @@
-(* General propositions and properties of functions *)
+(* General propositions and properties of functions. *)
 
 From set_theory Require Import lib.
 

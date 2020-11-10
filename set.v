@@ -1,4 +1,4 @@
-(* Basic notions from set theory *)
+(* Basic notions from set theory. *)
 
 From set_theory Require Import lib fn pair.
 

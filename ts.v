@@ -1,4 +1,4 @@
-(* Miscellaneous theorems *)
+(* Transition system lemmas. *)
 
 From set_theory Require Import lib.
 

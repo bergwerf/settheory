@@ -1,4 +1,4 @@
-(* Well-ordering *)
+(* Well-ordering definition and first results. *)
 
 From set_theory Require Import lib fn pair set.
 
