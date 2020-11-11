@@ -130,8 +130,9 @@ Arguments wos_initial_segment {_ _}.
 Definition WOSIsomorphism {V W _0 _1} (A : wos V _0) (B : wos W _1) f :=
   Bijective f /\ ∀x y, x <_0` y <-> f x <_1` f y.
 
-Notation "A ↾ x" := (wos_initial_segment A x)(at level 90, format "A ↾ x").
-Notation "A ≅ B" := (∃f, WOSIsomorphism A B f)(at level 100).
+Notation "A ↾ x" := (wos_initial_segment A x) (at level 70, format "A ↾ x").
+Notation "A ≅ B" := (∃f, WOSIsomorphism A B f) (at level 80).
+Notation "A ≇ B" := (¬(A ≅ B)) (at level 80).
 
 Lemma wos_total {V _0} (A : wos V _0) x y :
   x ≠ y -> x <_0` y \/ y <_0` x.
@@ -155,10 +156,10 @@ apply (wos_total A) in H as [H|H].
 Qed.
 
 (* A well-order is not isomorphic with a prefix of itself. *)
-Theorem wos_ncong_pre {V _0} (A : wos V _0) t :
-  ¬(A ≅ A↾t).
+Theorem wos_ncong_pre {V _0} (A : wos V _0) :
+  ¬∃t, A ≅ A↾t.
 Proof.
-intros [f [[g [_ Hg]] f_iso]].
+intros [t [f [[g [_ Hg]] f_iso]]].
 unfold segment_lt, Lt at 2 in f_iso.
 (* This is very similar to wos_automorphism_id. *)
 assert(∀x, sig1 (f x) = x). {
@@ -178,8 +179,8 @@ rewrite H in Hft. now apply irreflexive in Hft.
 Qed.
 
 (* Two different prefixes of a well-order are not isomorphic. *)
-Theorem wos_pre_ncong {V _0} (A : wos V _0) s t :
-  s <_0` t -> ¬(A↾t ≅ A↾s).
+Theorem wos_pre_ncong_pre {V _0} (A : wos V _0) s t :
+  s <_0` t -> A↾t ≇ A↾s.
 Proof.
 intros Hst [f [[g [_ Hg]] f_iso]].
 unfold segment_lt, Lt at 3, Lt at 6 in f_iso.
@@ -209,7 +210,16 @@ now apply irreflexive in Hft.
 Qed.
 
 (* Because of the previous theorem we may now define this. *)
-Notation "A ≺ B" := (∃x, A ≅ B↾x)(at level 100).
+Notation "A ≺ B" := (∃x, A ≅ B↾x) (at level 80).
+
+(* Comparability of well-ordenings. *)
+Theorem wos_comparability {U V _0 _1} (A : wos U _0) (B : wos V _1) :
+  A ≺ B \/ A ≅ B \/ B ≺ A.
+Proof.
+pose(R u v := A↾u ≅ B↾v).
+assert(HR : ∀u u' v v', R u v -> R u' v' -> u <_0` u' -> v <_1` v'). {
+  intros. }
+Abort.
 
 (* Creating ever larger well-orderings of the natural numbers. *)
 Require Import Wf_nat.
