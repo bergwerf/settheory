@@ -2,6 +2,7 @@
 
 From set_theory Require Import lib ts fn pair bin set d cb.
 
+(* We use lists exclusively for the embedding proof. *)
 Require Import List.
 Import ListNotations.
 

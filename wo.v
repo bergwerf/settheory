@@ -218,7 +218,7 @@ Theorem wos_comparability {U V _0 _1} (A : wos U _0) (B : wos V _1) :
 Proof.
 pose(R u v := A↾u ≅ B↾v).
 assert(HR : ∀u u' v v', R u v -> R u' v' -> u <_0` u' -> v <_1` v'). {
-  intros. }
+  intros. admit. }
 Abort.
 
 (* Creating ever larger well-orderings of the natural numbers. *)
