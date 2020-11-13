@@ -169,9 +169,28 @@ Definition empty_context (i : nat) : option U := None.
 End Tarski_truth.
 
 Arguments models {_}.
+Arguments empty_context {_}.
 
-Notation "A |= φ [ Γ ]" := (models A φ Γ) (at level 100).
+Notation "A |= φ [ Γ ]" := (models A Γ φ) (at level 100).
 Notation "A |= φ" := (A |= φ [ empty_context ]) (at level 100).
 
 End Model_definition.
 Import Model_definition.
+
+(* Some axioms also hold in the ordering of the natural numbers. *)
+Section Ordering_of_the_natural_numbers.
+
+Theorem nat_models_extensionality :
+  (eq, lt) |= Axiom_of_extensionality.
+Proof.
+simpl; unfold eq, lt.
+apply all_not_not_ex; intros x. apply PNNP, all_not_not_ex; intros y.
+apply PNNP; intros [H H']; apply H'; clear H'. cut(∀i, i < x <-> i < y).
+- clear H; revert y; induction x; intros.
+  destruct y. easy. exfalso; assert(H0 := H 0); lia.
+  destruct y. exfalso; assert(H0 := H 0); lia.
+  apply eq_S, IHx. intros; split; intros; assert(Hi := H (S i)); lia.
+- intros. eapply not_ex_all_not with (n:=i) in H. lia.
+Qed.
+
+End Ordering_of_the_natural_numbers.
