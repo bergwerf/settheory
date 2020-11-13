@@ -1,6 +1,6 @@
 (* The `derived set' with limit points of a set X : P C. *)
 
-From set_theory Require Import lib fn bin set.
+From set_theory Require Import lib fn set seq bin.
 
 (* All non-isolated points: distinct points exist within any branch of α. *)
 Definition D (X : P C) α := ∀m, ∃β, α ≠ β /\ (Branch m α ∩ X) β.
@@ -21,9 +21,9 @@ Proof.
 (* First find γ ∈ D(X) in the desired branch of α. *)
 intros α Hα m. destruct (Hα m) as [γ [Hαγ [Hm Hγ]]].
 (* Find  where γ splits from α, and find β ∈ X in this branch. *)
-apply C_neq in Hαγ as [n Hn]. destruct (Hγ (S n)) as [β [Hγβ [H1β H2β]]].
+apply seq_neq in Hαγ as [n Hn]. destruct (Hγ (S n)) as [β [Hγβ [H1β H2β]]].
 (* Now β is apart from α but still in the desired branch. *)
-exists β; repeat split. apply C_neq; exists n. rewrite <-H1β. easy. lia.
+exists β; repeat split. apply seq_neq; exists n. rewrite <-H1β. easy. lia.
 assert(m <= n). { apply not_gt. intros H'. now apply Hm in H'. }
 eapply branch_trans. apply Hm. eapply branch_incl. 2: apply H1β. auto. easy.
 Qed.
@@ -113,7 +113,7 @@ induction n. now exists {0}.
 destruct IHn as [X HX]; exists (Shifts X).
 apply incl_eq; unfold Singleton; intros α Hα.
 - (* α ≠ zeros is not a limit point. *)
-  apply NNPP; intros H; apply C_neq in H as [i Hi].
+  apply NNPP; intros H; apply seq_neq in H as [i Hi].
   unfold zeros in Hi; apply not_eq_sym, not_false_iff_true in Hi.
   (* Find β in (D ↑ n) (Shifts X) s.t. Branch (S i) α β. *)
   simpl in Hα; destruct (Hα (S i)) as [β [H1β [H2β H3β]]].
@@ -122,7 +122,7 @@ apply incl_eq; unfold Singleton; intros α Hα.
   admit.
 - (* zeros is a limit point. *)
   subst; intros m. exists (shift_branch m zeros); repeat split.
-  + apply C_neq; exists m. unfold shift_branch, shift, pre.
+  + apply seq_neq; exists m. unfold shift_branch, shift, pre.
     rewrite ltb_irrefl; replace (m - m <? 1) with true by b_lia.
     now unfold zeros, ones.
   + intros i Hi. unfold shift_branch, shift.

@@ -1,6 +1,6 @@
 (* The set of Cantor-Bendixon derivatives. *)
 
-From set_theory Require Import lib fn pair bin set d.
+From set_theory Require Import lib fn pair set seq bin d.
 
 (* We can prove several lemmas about CB(X) when X is a closed set. *)
 Section Closed_sets.

@@ -5,6 +5,7 @@ ts.v
 
 fn.v
 pair.v
+seq.v
 set.v
 bin.v
 csb.v

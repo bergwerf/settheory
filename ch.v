@@ -1,6 +1,6 @@
 (* A proof that the continuum hypothesis holds for closed sets. *)
 
-From set_theory Require Import lib ts fn pair bin set d cb.
+From set_theory Require Import lib ts fn pair set seq bin d cb.
 
 (* We use lists exclusively for the embedding proof. *)
 Require Import List.
@@ -78,7 +78,7 @@ Definition nth_rev s i := nth i (rev s) false.
 Section Part_I.
 
 (* Stepping function beloning to Cσ. *)
-Definition Cσ_step (b : bool) n s α := (b :: s, n<<α).
+Definition Cσ_step (b : bool) n s (α : C) := (b :: s, n<<α).
 
 (* State transition function belonging to Cσ. *)
 Definition Cσ_trans s α := if σ_2way s then (α 0, 1) else (σ (true :: s), 0).
@@ -238,7 +238,8 @@ Theorem nth_Cσ_inj s α1 α2 i :
   σ s = true -> α1 i ≠ α2 i -> ∃n, nth_Cσ s α1 n ≠ nth_Cσ s α2 n.
 Proof.
 intros Hs Hi; apply find_first_split in Hi as [j [_ [H1j H2j]]].
-clear i; revert Hs H1j H2j; revert s α1 α2; induction j; intros.
+2: apply bool_dec. clear i; revert Hs H1j H2j; revert s α1 α2.
+induction j; intros.
 - (* α1 and α2 are apart at the next split. *)
   apply Cσ_split with (α:=α1) in Hs as [n [H1n H2n]]; exists n.
   unfold nth_Cσ; erewrite <-add_1_r, ?Cσ_add.
@@ -322,8 +323,8 @@ Theorem σ_split s :
 Proof.
 intros H; apply Hσ in H as [α [H1α H2α]]. assert(H3α := perfect_X _ H1α).
 destruct (H3α (length s)) as [β [H1β [H2β H3β]]].
-apply C_neq in H1β as [i' Hi'];
-apply find_first_split in Hi' as [i [_ [H1i H2i]]].
+apply seq_neq in H1β as [i' Hi'];
+apply find_first_split in Hi' as [i [_ [H1i H2i]]]. 2: apply bool_dec.
 (* Construct a continuation using induction on i - length s. *)
 assert(i >= length s). { apply not_lt; intros H. now apply H2β in H. }
 remember (i - length s) as n; assert(i = length s + n) by lia.
@@ -372,9 +373,9 @@ exists (nth_Cσ σ []); split.
     eapply branch_trans. now apply nth_Cσ_eq_nth_rev.
     easy. easy.
 - (* Injective *)
-  intros α1 α2; apply classic_contra; intros. apply C_neq in H as [i Hi].
+  intros α1 α2; apply classic_contra; intros. apply seq_neq in H as [i Hi].
   apply nth_Cσ_inj with (σ:=σ)(s:=[]) in Hi as [n Hn].
-  apply C_neq; now exists n. all: easy.
+  apply seq_neq; now exists n. all: easy.
 Qed.
 
 End Perfect_embedding.

@@ -1,14 +1,8 @@
 (* Introducing the axiomatic approach to set theory. *)
 
-Require Import lib bin.
+Require Import lib seq.
 
 Module Basic_language_of_set_theory.
-
-(* Set value in a sequence. *)
-Definition set {T} n v (α : nat -> T) i := if i =? n then v else α i.
-
-Notation "α ; n := v" := (set n v α)
-  (at level 50, left associativity, format "α ; n := v").
 
 (* Formulae in the basic language of set-theory. *)
 Inductive formula :=
@@ -49,7 +43,7 @@ Fixpoint mapf f φ :=
   end.
 
 (* Compute number of free variables. *)
-Definition fv (Γ : C) i := if Γ i then 0 else S i.
+Definition fv (Γ : nat -> bool) i := if Γ i then 0 else S i.
 Fixpoint max_fv (Γ : nat -> bool) φ :=
   match φ with
   | i == j => max (fv Γ i) (fv Γ j)
@@ -144,7 +138,9 @@ A set-theoretic model can be specified by giving a universe type,
 an equality predicate, and an inclusion predicate.
 *)
 Definition model U : Type := (U -> U -> Prop) * (U -> U -> Prop).
+
 Definition context U := nat -> option U.
+Definition Γ0 {U} : context U := λ _, None.
 
 Section Tarski_truth.
 
@@ -167,8 +163,6 @@ Fixpoint models (Γ : context U) φ : Prop :=
   | ϕ ∧` ψ => models Γ ϕ /\ models Γ ψ
   | ∃`x[ϕ] => ∃u, models (set x (Some u) Γ) ϕ
   end.
-
-Definition Γ0 (i : nat) : option U := None.
 
 End Tarski_truth.
 
