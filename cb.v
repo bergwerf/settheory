@@ -54,7 +54,7 @@ Qed.
 
 (* We introduce a short notation for a disjoint branch. *)
 Definition CB_Disjoint (s : nat * C) Y :=
-  CB Y /\ Y ∩ Branch (fst s) (snd s) = ∅.
+  CB Y /\ Y ∩ Eqn (fst s) (snd s) = ∅.
 
 (*
 If α ∈ X is not in the kernel, Y ∈ CB(X) exists s.t. α ∉ Y and
@@ -107,11 +107,11 @@ symmetry; apply incl_eq.
   rewrite diff_ωisect_eq_ωunion_diff; exists n. split. easy.
   (* Use HY to show that Y_n is indeed disjoint from α. *)
   assert(Hn' : ∃Y', CB_Disjoint (pre_decode n) Y'). { exists Z; split.
-    easy. erewrite branch_eq. 2: apply branch_sym, Hn. easy. }
+    easy. erewrite eqn_eq. 2: apply eqn_sym, Hn. easy. }
   apply HY in Hn' as [_ HYn]; apply eq_incl in HYn as [HYn _].
   (* We use that α ∈ Y n implies α ∈ ∅. *)
   intros Hα; apply (HYn α); split. easy.
-  now apply branch_sym.
+  now apply eqn_sym.
 Qed.
 
 (* The kernel contains no isolated points. *)

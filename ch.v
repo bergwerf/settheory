@@ -116,7 +116,7 @@ Qed.
 
 (* nth_Cσ is the same as nth_rev of a prefix given by Cσ. *)
 Theorem nth_Cσ_eq_nth_rev m α :
-  Branch m (nth_Cσ [] α) (nth_rev (Cσ [] α m)).
+  Eqn m (nth_Cσ [] α) (nth_rev (Cσ [] α m)).
 Proof.
 induction m; intros. easy.
 rewrite Cσ_self_extending with (d:=false). intros i Hi.
@@ -252,7 +252,7 @@ induction j; intros.
   erewrite <-add_succ_r, ?Cσ_add, Cσ_change_seq with (n:=m)(α1:=α2)(α2:=α1).
   simpl; rewrite ?H2m. rewrite <-H1j, add_comm. apply Hn. lia.
   1-3: apply H1m. unfold σ_2way in H2m; b_Prop.
-  now destruct (α1 0). now apply branch_del.
+  now destruct (α1 0). now apply eqn_del.
 Qed.
 
 End Part_II.
@@ -261,13 +261,13 @@ End Finitary_spread.
 
 (* Every prefix is either in X or is not in X (Law of Excluded Middle). *)
 Definition prefix_LEM s b :=
-  b = true <-> ∃α, X α /\ Branch (length s) (nth_rev s) α.
+  b = true <-> ∃α, X α /\ Eqn (length s) (nth_rev s) α.
 
 (* Classical logic shows that prefix_LEM holds. *)
 Lemma prefix_LEM_classic s :
   ∃!b, prefix_LEM s b.
 Proof.
-unfold unique; destruct (classic (∃α, X α /\ Branch (length s) (nth_rev s) α)).
+unfold unique; destruct (classic (∃α, X α /\ Eqn (length s) (nth_rev s) α)).
 - exists true; split; try easy. intros b; destruct b; try easy.
   now intros H'; symmetry; apply H'.
 - exists false; split; try easy. intros b; destruct b; try easy.
@@ -288,9 +288,9 @@ apply not_empty in nonempty_X as [α Hα].
 apply Hσ; now exists α.
 Qed.
 
-Lemma branch_S_nth_rev s b α :
-  Branch (length s) (nth_rev s) α -> α (length s) = b ->
-  Branch (S (length s)) (nth_rev (b :: s)) α.
+Lemma eqn_S_nth_rev s b α :
+  Eqn (length s) (nth_rev s) α -> α (length s) = b ->
+  Eqn (S (length s)) (nth_rev (b :: s)) α.
 Proof.
 intros Hm Hb i Hi. eapply nth_rev_cases in Hi
 as [[H R]|[H R]]; rewrite R. now apply Hm. now subst.
@@ -303,7 +303,7 @@ Proof.
 split.
 - (* Continuation *)
   intros H; apply Hσ in H as [α [H1α H2α]]. exists (α (length s)).
-  apply Hσ; exists α; split. easy. simpl. now apply branch_S_nth_rev.
+  apply Hσ; exists α; split. easy. simpl. now apply eqn_S_nth_rev.
 - (* Pre-continuation *)
   intros [b Hb]. apply Hσ in Hb as [α [H1α H2α]]; apply Hσ; exists α.
   split. easy. intros i Hi. rewrite <-H2α; unfold nth_rev.
@@ -334,16 +334,16 @@ revert H1α H2α H1i H2i H3β; revert s. induction n; intros.
   exists []; rewrite app_nil_l; rewrite add_0_r in *.
   apply andb_forall_true with (f:=λ b, σ (b :: s)).
   intros; apply Hσ; simpl. destruct (bool_dec (α (length s)) b).
-  + exists α; split. easy. now apply branch_S_nth_rev.
-  + exists β; split. easy. apply branch_S_nth_rev.
-    eapply branch_trans. apply H2α. easy.
+  + exists α; split. easy. now apply eqn_S_nth_rev.
+  + exists β; split. easy. apply eqn_S_nth_rev.
+    eapply eqn_trans. apply H2α. easy.
     eapply bool_triangle. apply H2i. easy.
 - (* We take a 1-way step. *)
   pose(b := α (length s)); pose(t := b :: s).
   assert(length s + S n = length t + n) by (simpl; now rewrite <-add_succ_r).
   rewrite H in H1i, H2i. apply IHn in H2i as [t' Ht']; try easy.
   exists (t' ++ [b]); now rewrite <-app_assoc.
-  unfold t; simpl. now apply branch_S_nth_rev.
+  unfold t; simpl. now apply eqn_S_nth_rev.
 Qed.
 
 End X_prefix_decider.
@@ -366,11 +366,11 @@ exists (nth_Cσ σ []); split.
   destruct (H3β m) as [γ [H1γ [H2γ H3γ]]].
   destruct (classic (nth_Cσ σ [] α = β)).
   + exists γ; repeat split. now rewrite H.
-    eapply branch_trans. now apply nth_Cσ_eq_nth_rev.
-    eapply branch_trans. apply H2β.
+    eapply eqn_trans. now apply nth_Cσ_eq_nth_rev.
+    eapply eqn_trans. apply H2β.
     easy. easy.
   + exists β; repeat split. easy.
-    eapply branch_trans. now apply nth_Cσ_eq_nth_rev.
+    eapply eqn_trans. now apply nth_Cσ_eq_nth_rev.
     easy. easy.
 - (* Injective *)
   intros α1 α2; apply classic_contra; intros. apply seq_neq in H as [i Hi].

@@ -139,8 +139,8 @@ an equality predicate, and an inclusion predicate.
 *)
 Definition model U : Type := (U -> U -> Prop) * (U -> U -> Prop).
 
-Definition context U := nat -> option U.
-Definition Γ0 {U} : context U := λ _, None.
+Definition ctx U := nat -> option U.
+Definition Γ0 {U} : ctx U := λ _, None.
 
 Section Tarski_truth.
 
@@ -155,7 +155,7 @@ Definition holds (R : U -> U -> Prop) x y :=
   end.
 
 (* Tarski-truth definition. *)
-Fixpoint models (Γ : context U) φ : Prop :=
+Fixpoint models (Γ : ctx U) φ : Prop :=
   match φ with
   | i == j => holds (fst A) (Γ i) (Γ j)
   | i ∈ j => holds (snd A) (Γ i) (Γ j)
@@ -169,7 +169,7 @@ End Tarski_truth.
 Arguments models {_}.
 Arguments Γ0 {_}.
 
-Notation "↓ x" := (Some x) (at level 30, format "↓ x").
+Notation "↓ x" := (Some x) (at level 20, format "↓ x").
 Notation "A |= ( φ )[ Γ ]" := (models A Γ φ)
   (at level 75, format "A  |=  ( φ )[ Γ ]").
 Notation "A |= φ" := (A |= (φ)[Γ0])
@@ -182,10 +182,10 @@ Section Proof_principles.
 
 Variable U : Type.
 Variable A : model U.
-Variable Γ : context U.
 
 Section Part_1.
 
+Variable Γ : ctx U.
 Variable φ ϕ : formula.
 
 Theorem disj_elim :
@@ -228,6 +228,7 @@ End Part_1.
 
 Section Part_2.
 
+Variable Γ : ctx U.
 Variable φ ϕ : formula.
 
 Theorem iff_intro :
@@ -243,7 +244,35 @@ intros [H1 H2]; split; intros; eapply implies_elim.
 apply H1. easy. apply H2. easy.
 Qed.
 
+Theorem closure_intro n :
+  (∀Δ : ctx U, A |= (φ)[pre n Δ Γ]) -> A |= (∀^(n)[φ])[Γ].
+Proof.
+revert φ; induction n; simpl; intros.
+assert(H' := H Γ0); now rewrite pre_0 in H'.
+apply IHn; intros. apply forall_intro; intros.
+rewrite set_eq_pre_pre_const, pre_pre1, pre_pre2.
+apply H. lia.
+Qed.
+
 End Part_2.
+
+Section Part_3.
+
+Variable Γ : ctx U.
+Variable φ : formula.
+
+Theorem change_context Δ :
+  Eqn (FV φ) Γ Δ -> A |= (φ)[Γ] -> A |= (φ)[Δ].
+Proof.
+Admitted.
+
+Theorem subst_elim x y u :
+  A |= (φ\[x:=y])[Γ;y:=↓u] ->
+  A |= (φ)[Γ;y:=↓u;x:=↓u].
+Proof.
+Admitted.
+
+End Part_3.
 
 End Proof_principles.
 
@@ -275,12 +304,31 @@ apply iff_intro; split; simpl.
 - intros [n Hn]; lia.
 Qed.
 
+Lemma classical_bounded_search (P : nat -> Prop) n :
+  P n -> ∃m, m <= n /\ P m /\ ∀k, k < m -> ¬P k.
+Proof.
+revert P; induction n; intros. now exists 0.
+apply IHn in H as [l Hl]. destruct (classic (P 0)).
+exists 0; repeat split; try easy. lia.
+exists (S l); repeat split. lia. easy.
+intros; destruct k. easy. apply Hl; lia.
+Qed.
+
 Theorem nat_models_regularity φ :
   FV φ >= 1 -> NatLt |= Schema_of_regularity φ.
 Proof.
 intros Hφ; unfold Schema_of_regularity.
 remember (FV φ - 1) as x; remember (S x) as y.
-(* We need a good way to introduce the vector of context variables. *)
-Abort.
+apply closure_intro; intros. remember (pre x Δ Γ0) as Γ.
+apply implies_intro; intros [w Hw].
+apply classical_bounded_search with (n:=w) in Hw as [m [_ [H1m H2m]]].
+exists m; split. easy.
+apply forall_intro; intros; apply implies_intro; intros H H'.
+revert H; simpl; rewrite set_get1, set_get2, set_get1. 2: lia.
+simpl; intros. apply H2m in H; apply H; clear H.
+apply subst_elim in H'. rewrite set_comm, set_override in H'.
+eapply change_context. 2: apply H'. apply eqn_sym, set_eqn.
+all: lia.
+Qed.
 
 End Ordering_of_the_natural_numbers.

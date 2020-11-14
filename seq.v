@@ -14,50 +14,60 @@ Section Sequences.
 Variable T : Type.
 Variable dec : ∀x y : T, {x = y} + {x ≠ y}.
 
-Definition Branch m (α β : nat -> T) := ∀i, i < m -> α i = β i.
+Definition Eqn m (α β : nat -> T) := ∀i, i < m -> α i = β i.
 Definition const (x : T) (i : nat) := x.
 Definition del m (α : nat -> T) i := α (m + i).
 Definition shift m x (α : nat -> T) i := if i <? m then x else α (i - m).
 Definition pre m (α β : nat -> T) i := if i <? m then α i else β i.
-Definition set {T} n v (α : nat -> T) i := if i =? n then v else α i.
+Definition set n v (α : nat -> T) i := if i =? n then v else α i.
 
-Lemma branch_refl m α : Branch m α α.
+Lemma eqn_refl m α : Eqn m α α.
 Proof. easy. Qed.
 
-Lemma branch_sym m α β : Branch m α β -> Branch m β α.
+Lemma eqn_sym m α β : Eqn m α β -> Eqn m β α.
 Proof. intros H i Hi. symmetry. auto. Qed.
 
-Lemma branch_trans m α β γ : Branch m α β -> Branch m β γ -> Branch m α γ.
+Lemma eqn_trans m α β γ : Eqn m α β -> Eqn m β γ -> Eqn m α γ.
 Proof. intros H1 H2 i Hi. etransitivity. all: auto. Qed.
 
-Lemma branch_pre m α β : Branch m α (pre m α β).
+Lemma eqn_pre m α β : Eqn m α (pre m α β).
 Proof. intros i Hi. unfold pre. now apply ltb_lt in Hi; rewrite Hi. Qed.
 
-Lemma branch_incl m n α : m <= n -> Branch n α ⊆ Branch m α.
+Lemma eqn_incl m n α : m <= n -> Eqn n α ⊆ Eqn m α.
 Proof. intros Hle β H i Hi. apply H. lia. Qed.
 
-Lemma branch_del m n α β : Branch (m + n) α β -> Branch n (del m α) (del m β).
+Lemma eqn_del m n α β : Eqn (m + n) α β -> Eqn n (del m α) (del m β).
 Proof. intros H i Hi; unfold del. apply H; lia. Qed.
 
-Lemma branch_eq m α β :
-  Branch m α β -> Branch m α = Branch m β.
+Lemma eqn_eq m α β :
+  Eqn m α β -> Eqn m α = Eqn m β.
 Proof.
-intros; apply incl_eq; intros γ Hγ; eapply branch_trans.
-apply branch_sym, H. easy. apply H. easy.
+intros; apply incl_eq; intros γ Hγ; eapply eqn_trans.
+apply eqn_sym, H. easy. apply H. easy.
 Qed.
 
-Lemma branch_S m α β :
-  Branch m α β -> α m = β m -> Branch (S m) α β.
+Lemma eqn_S m α β :
+  Eqn m α β -> α m = β m -> Eqn (S m) α β.
 Proof.
 intros Hm HS i Hi. apply lt_S in Hi as [Hi|Hi].
 now apply Hm. now subst.
 Qed.
 
+Lemma pre_0 α β : pre 0 α β = β.
+Proof. extensionality i. now replace (i <? 0) with false by b_lia. Qed.
+
 Lemma pre_m_mth m α β : pre m α β m = β m.
 Proof. unfold pre; now rewrite ltb_irrefl. Qed.
 
-Lemma pre_pre m α β γ : pre m (pre m α β) γ = pre m α γ.
+Lemma pre_pre1 m α β γ : pre m (pre m α β) γ = pre m α γ.
 Proof. extensionality i; unfold pre. now destruct (i <? m). Qed.
+
+Lemma pre_pre2 m n α β γ :
+  m < n -> pre n α (pre m β γ) = pre n α γ.
+Proof.
+intros; extensionality i; unfold pre.
+destruct (i <? n) eqn:E. easy. now replace (i <? m) with false by b_lia.
+Qed.
 
 Lemma shift_m_mth m x α : (shift m x α) m = α 0.
 Proof. unfold shift; now rewrite ltb_irrefl, sub_diag. Qed.
@@ -76,9 +86,39 @@ replace (m + i <? m) with false by b_lia.
 now replace (m + i - m) with i by b_lia.
 Qed.
 
-(* Find the least shared branch of two different sequences. *)
+Lemma set_get1 n x α : set n x α n = x.
+Proof. unfold set; now rewrite Nat.eqb_refl. Qed.
+
+Lemma set_get2 n x α i : i ≠ n -> set n x α i = α i.
+Proof. intros; unfold set; now replace (i =? n) with false by b_lia. Qed.
+
+Lemma set_override n x y α : set n x (set n y α) = set n x α.
+Proof. extensionality i; unfold set. now destruct (i =? n). Qed.
+
+Lemma set_eqn m x n α : m <= n -> Eqn m α (set n x α).
+Proof. intros H i Hi; unfold set. now replace (i =? n) with false by b_lia. Qed.
+
+Lemma set_comm m n x y α :
+  m ≠ n -> set m x (set n y α) = set n y (set m x α).
+Proof.
+intros; extensionality i; unfold set.
+destruct (i =? m) eqn:H1, (i =? n) eqn:H2; try easy. b_lia.
+Qed.
+
+Lemma set_eq_pre_pre_const n x α :
+  set n x α = pre (S n) (pre n α (const x)) α.
+Proof.
+extensionality i; unfold set, pre, shift.
+destruct (i =? n) eqn:E; b_Prop.
+subst; rewrite ltb_irrefl. now replace (n <? S n) with true by b_lia.
+apply not_eq in E as [E|E]. replace (i <? S n) with true by b_lia.
+now replace (i <? n) with true by b_lia.
+now replace (i <? S n) with false by b_lia.
+Qed.
+
+(* Find the least shared eqn of two different sequences. *)
 Lemma find_first_split α β i :
-  α i ≠ β i -> ∃m, m <= i /\ Branch m α β /\ α m ≠ β m.
+  α i ≠ β i -> ∃m, m <= i /\ Eqn m α β /\ α m ≠ β m.
 Proof.
 revert α β; induction i; intros. now exists 0.
 destruct (IHi (del 1 α) (del 1 β)) as [m [H1m [H2m H3m]]]. easy.
@@ -114,7 +154,7 @@ End Intensional_equality.
 
 End Sequences.
 
-Arguments Branch {_}.
+Arguments Eqn {_}.
 Arguments const  {_}.
 Arguments del {_}.
 Arguments shift {_}.
