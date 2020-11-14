@@ -42,7 +42,17 @@ Fixpoint mapf f φ :=
   | ∃`x[ϕ] => ∃`x[mapf f ϕ]
   end.
 
-(* Compute number of free variables. *)
+(* Compute if a variable occurs freely. *)
+Fixpoint free y φ : bool :=
+  match φ with
+  | i == j => (i =? y) || (j =? y)
+  | i ∈ j => (i =? y) || (j =? y)
+  | ¬`ϕ => free y ϕ
+  | ϕ ∧` ψ => free y ϕ || free y ψ
+  | ∃`x[ϕ] => if x =? y then false else free y ϕ
+  end.
+
+(* Compute upper bound on free variables. *)
 Definition fv (Γ : nat -> bool) i := if Γ i then 0 else S i.
 Fixpoint max_fv (Γ : nat -> bool) φ :=
   match φ with
@@ -70,67 +80,6 @@ Notation "∃! x [ φ ]" := (Exists_unique x φ) (format "∃! x [ φ ]").
 End Basic_language_of_set_theory.
 Import Basic_language_of_set_theory.
 
-Section Zermelo_Fraenkel_axioms.
-
-(* 1. Standard model theoretic conventions. *)
-
-Definition Not_empty := ∃`0[0 == 0].
-Definition Eq_refl := ∀`0[0 == 0].
-Definition Eq_sym := ∀`0[∀`1[0 == 1 ==> 1 == 0]].
-Definition Eq_trans := ∀`0[∀`1[∀`2[0 == 1 ∧` 1 == 2 ==> 0 == 2]]].
-Definition Eq_equiv := Eq_refl ∧` Eq_sym ∧` Eq_trans.
-
-(* 2. Frege's comprehension scheme. *)
-
-Definition Schema_of_comprehension φ :=
-  let n := FV φ - 1 in
-  let x := n in
-  let z := S x in
-  ∀^(n)[∃`z[∀`x[x ∈ z <=> φ]]].
-
-(* 3. Zermelo's axioms. *)
-
-Definition Axiom_of_extensionality :=
-  ∀`0[∀`1[∀`2[2 ∈ 0 <=> 2 ∈ 1] ==> 0 == 1]].
-
-Definition Axiom_of_pairing :=
-  ∀`0[∀`1[∃`2[∀`3[3 ∈ 2 <=> 3 == 0 ∨` 3 == 1]]]].
-
-Definition Axiom_of_union :=
-  ∀`0[∃`1[∀`2[2 ∈ 1 <=> ∃`3[2 ∈ 3 ∧` 3 ∈ 0]]]].
-
-Definition Axiom_of_powersets :=
-  ∀`0[∃`1[∀`2[2 ∈ 1 <=> ∀`3[3 ∈ 2 ==> 3 ∈ 0]]]].
-
-(* Axiom of infinity: ∃I[∅ ∈ I ∧ ∀n ∈ I[{n, {n}} ∈ I]]. *)
-
-Definition Schema_of_regularity φ :=
-  let n := FV φ - 1 in
-  let x := n in
-  let y := S x in
-  ∀^(n)[∃`x[φ] ==> ∃`x[φ ∧` ∀`y[y ∈ x ==> ¬`φ\[x:=y]]]].
-
-Definition Schema_of_specification φ :=
-  let n := FV φ - 1 in
-  let x := n in
-  let a := S x in
-  let b := S a in
-  ∀^(n)[∀`a[∃`b[∀`x[x ∈ b <=> x ∈ a ∧` φ]]]].
-
-(* Fraenkels missing schema of replacement. *)
-Definition Schema_of_replacement φ :=
-  let n := FV φ - 2 in
-  let x := n in
-  let y := S x in
-  let a := S y in
-  let b := S a in
-  ∀^(n)[∀`a[
-    ∀`x[x ∈ a ==> ∃!y[φ]] ==>
-    ∃`b[∀`x[x ∈ a ==> ∃`y[y ∈ b ∧` φ]]]
-  ]].
-
-End Zermelo_Fraenkel_axioms.
-
 Module Model_definition.
 
 (*
@@ -140,7 +89,7 @@ an equality predicate, and an inclusion predicate.
 Definition model U : Type := (U -> U -> Prop) * (U -> U -> Prop).
 
 Definition ctx U := nat -> option U.
-Definition Γ0 {U} : ctx U := λ _, None.
+Definition Γ0 {U} : ctx U := const None.
 
 Section Tarski_truth.
 
@@ -148,29 +97,29 @@ Variable U : Type.
 Variable A : model U.
 
 (* Evaluate relation given two optionally bound values. *)
-Definition holds (R : U -> U -> Prop) x y :=
+Definition Holds (R : U -> U -> Prop) x y :=
   match x, y with
   | Some u, Some v => R u v
   | _, _ => False
   end.
 
 (* Tarski-truth definition. *)
-Fixpoint models (Γ : ctx U) φ : Prop :=
+Fixpoint Realizes (Γ : ctx U) φ : Prop :=
   match φ with
-  | i == j => holds (fst A) (Γ i) (Γ j)
-  | i ∈ j => holds (snd A) (Γ i) (Γ j)
-  | ¬`ϕ => ¬models Γ ϕ
-  | ϕ ∧` ψ => models Γ ϕ /\ models Γ ψ
-  | ∃`x[ϕ] => ∃u, models (set x (Some u) Γ) ϕ
+  | i == j => Holds (fst A) (Γ i) (Γ j)
+  | i ∈ j => Holds (snd A) (Γ i) (Γ j)
+  | ¬`ϕ => ¬Realizes Γ ϕ
+  | ϕ ∧` ψ => Realizes Γ ϕ /\ Realizes Γ ψ
+  | ∃`x[ϕ] => ∃u, Realizes (set x (Some u) Γ) ϕ
   end.
 
 End Tarski_truth.
 
-Arguments models {_}.
+Arguments Realizes {_}.
 Arguments Γ0 {_}.
 
 Notation "↓ x" := (Some x) (at level 20, format "↓ x").
-Notation "A |= ( φ )[ Γ ]" := (models A Γ φ)
+Notation "A |= ( φ )[ Γ ]" := (Realizes A Γ φ)
   (at level 75, format "A  |=  ( φ )[ Γ ]").
 Notation "A |= φ" := (A |= (φ)[Γ0])
   (at level 75).
@@ -178,7 +127,7 @@ Notation "A |= φ" := (A |= (φ)[Γ0])
 End Model_definition.
 Import Model_definition.
 
-Section Proof_principles.
+Section General_proofs.
 
 Variable U : Type.
 Variable A : model U.
@@ -261,27 +210,114 @@ Section Part_3.
 Variable Γ : ctx U.
 Variable φ : formula.
 
-Theorem change_context Δ :
-  Eqn (FV φ) Γ Δ -> A |= (φ)[Γ] -> A |= (φ)[Δ].
+Theorem change_context (Δ : ctx U) :
+  (∀i, free i φ = true -> Γ i = Δ i) -> A |= (φ)[Γ] -> A |= (φ)[Δ].
 Proof.
-Admitted.
+unfold FV; revert Γ Δ; induction φ; simpl; intros.
+1,2: erewrite <-H, <-H; try easy; now rewrite Nat.eqb_refl, ?orb_true_r.
+- intros H'; apply H0.
+  eapply IHf. 2: apply H'.
+  intros. symmetry; now apply H.
+- split. apply IHf1 with (Γ:=Γ); try easy. 2: eapply IHf2 with (Γ:=Γ); try easy.
+  all: intros i Hi; apply H; now rewrite Hi, ?orb_true_r.
+- destruct H0 as [u Hu]; exists u.
+  eapply IHf. 2: apply Hu. intros i Hi.
+  destruct (eq_dec x i). subst; now rewrite ?set_get1.
+  rewrite ?set_get2; try lia. apply H.
+  now replace (x =? i) with false by b_lia.
+Qed.
+
+Lemma free_max_fv bound x :
+  free x φ = true -> bound x = false -> x < max_fv bound φ.
+Proof.
+revert bound; unfold FV; induction φ; simpl; intros.
+1,2: unfold fv; destruct (x0 =? x) eqn:H1, (y =? x) eqn:H2;
+b_Prop; subst; try easy; rewrite H0; lia.
+- auto.
+- apply orb_true_elim in H as [H|H].
+  apply IHf1 in H0; try easy; lia. apply IHf2 in H0; try easy; lia.
+- destruct (x0 =? x) eqn:E; try easy; b_Prop.
+  apply IHf. easy. rewrite set_get2. easy. lia.
+Qed.
 
 Theorem subst_elim x y u :
-  A |= (φ\[x:=y])[Γ;y:=↓u] ->
-  A |= (φ)[Γ;y:=↓u;x:=↓u].
+  Γ y = Some u ->
+  A |= (φ\[x:=y])[Γ] ->
+  A |= (φ)[Γ;x:=↓u].
 Proof.
 Admitted.
 
 End Part_3.
 
-End Proof_principles.
+End General_proofs.
+
+Section Zermelo_Fraenkel_axioms.
+
+(* 1. Standard model theoretic conventions. *)
+
+Definition Not_empty := ∃`0[0 == 0].
+Definition Eq_refl := ∀`0[0 == 0].
+Definition Eq_sym := ∀`0[∀`1[0 == 1 ==> 1 == 0]].
+Definition Eq_trans := ∀`0[∀`1[∀`2[0 == 1 ∧` 1 == 2 ==> 0 == 2]]].
+Definition Eq_equiv := Eq_refl ∧` Eq_sym ∧` Eq_trans.
+
+(* 2. Frege's comprehension scheme. *)
+
+Definition Schema_of_comprehension φ :=
+  let n := FV φ - 1 in
+  let x := n in
+  let z := S x in
+  ∀^(n)[∃`z[∀`x[x ∈ z <=> φ]]].
+
+(* 3. Zermelo's axioms. *)
+
+Definition Axiom_of_extensionality :=
+  ∀`0[∀`1[∀`2[2 ∈ 0 <=> 2 ∈ 1] ==> 0 == 1]].
+
+Definition Axiom_of_pairing :=
+  ∀`0[∀`1[∃`2[∀`3[3 ∈ 2 <=> 3 == 0 ∨` 3 == 1]]]].
+
+Definition Axiom_of_union :=
+  ∀`0[∃`1[∀`2[2 ∈ 1 <=> ∃`3[2 ∈ 3 ∧` 3 ∈ 0]]]].
+
+Definition Axiom_of_powersets :=
+  ∀`0[∃`1[∀`2[2 ∈ 1 <=> ∀`3[3 ∈ 2 ==> 3 ∈ 0]]]].
+
+(* Axiom of infinity: ∃I[∅ ∈ I ∧ ∀n ∈ I[{n, {n}} ∈ I]]. *)
+
+Definition Schema_of_regularity φ :=
+  let n := FV φ - 1 in
+  let x := n in
+  let y := S x in
+  ∀^(n)[∃`x[φ] ==> ∃`x[φ ∧` ∀`y[y ∈ x ==> ¬`φ\[x:=y]]]].
+
+Definition Schema_of_specification φ :=
+  let n := FV φ - 1 in
+  let x := n in
+  let a := S x in
+  let b := S a in
+  ∀^(n)[∀`a[∃`b[∀`x[x ∈ b <=> x ∈ a ∧` φ]]]].
+
+(* Fraenkels missing schema of replacement. *)
+Definition Schema_of_replacement φ :=
+  let n := FV φ - 2 in
+  let x := n in
+  let y := S x in
+  let a := S y in
+  let b := S a in
+  ∀^(n)[∀`a[
+    ∀`x[x ∈ a ==> ∃!y[φ]] ==>
+    ∃`b[∀`x[x ∈ a ==> ∃`y[y ∈ b ∧` φ]]]
+  ]].
+
+End Zermelo_Fraenkel_axioms.
 
 (* Some axioms also hold in the ordering of the natural numbers. *)
 Section Ordering_of_the_natural_numbers.
 
 Definition NatLt := (@Logic.eq nat, Peano.lt).
 
-Theorem nat_models_extensionality :
+Theorem nat_realizes_extensionality :
   NatLt |= Axiom_of_extensionality.
 Proof.
 repeat (apply forall_intro; intros).
@@ -294,7 +330,7 @@ cut(∀i, i < u <-> i < u0).
 - intros. apply forall_elim with (u:=i) in H. now apply iff_elim in H.
 Qed.
 
-Theorem nat_models_union :
+Theorem nat_realizes_union :
   NatLt |= Axiom_of_union.
 Proof.
 repeat (apply forall_intro; intros).
@@ -314,7 +350,7 @@ exists (S l); repeat split. lia. easy.
 intros; destruct k. easy. apply Hl; lia.
 Qed.
 
-Theorem nat_models_regularity φ :
+Theorem nat_realizes_regularity φ :
   FV φ >= 1 -> NatLt |= Schema_of_regularity φ.
 Proof.
 intros Hφ; unfold Schema_of_regularity.
@@ -326,9 +362,11 @@ exists m; split. easy.
 apply forall_intro; intros; apply implies_intro; intros H H'.
 revert H; simpl; rewrite set_get1, set_get2, set_get1. 2: lia.
 simpl; intros. apply H2m in H; apply H; clear H.
-apply subst_elim in H'. rewrite set_comm, set_override in H'.
-eapply change_context. 2: apply H'. apply eqn_sym, set_eqn.
-all: lia.
+eapply subst_elim in H'. 2: apply set_get1.
+rewrite set_comm, set_override in H'. 2: lia.
+eapply change_context; intros. 2: apply H'.
+apply free_max_fv with (bound:=const false) in H.
+rewrite set_get2. easy. unfold FV in Heqx; lia. easy.
 Qed.
 
 End Ordering_of_the_natural_numbers.
