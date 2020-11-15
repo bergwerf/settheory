@@ -6,7 +6,6 @@ Definition zeros := const false.
 Definition ones := const true.
 
 Notation "'C'" := (nat -> bool).
-Notation "'{0}'" := (Singleton zeros).
 Notation "n >> α" := (shift n false α) (at level 20, format "n >> α").
 
 Lemma cantor_eqn_union_S m α :

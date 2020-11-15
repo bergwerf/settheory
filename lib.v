@@ -49,8 +49,9 @@ are usually written in the same order as in the theorem statement (for example
 (* Convert boolean arithmetic relations to Prop. *)
 Ltac bool_to_Prop :=
   match goal with
-  | [H : _ && _ = true |- _] =>
-    let P := fresh H in (apply andb_prop in H as [P H])
+  | [H : _ && _ = true |- _] =>  apply andb_prop in H; destruct H
+  | [H : _ || _ = true |- _]  => apply orb_true_elim in H; destruct H
+  | [H : _ || _ = false |- _]  => apply orb_false_elim in H; destruct H
   | [H : _ =? _ = true |- _]   => apply Nat.eqb_eq in H
   | [H : _ =? _ = false |- _]  => apply Nat.eqb_neq in H
   | [H : _ <=? _ = true |- _]  => apply Nat.leb_le in H
@@ -58,6 +59,7 @@ Ltac bool_to_Prop :=
   | [H : _ <? _ = true |- _]   => apply Nat.ltb_lt in H
   | [H : _ <? _ = false |- _]  => apply Nat.ltb_ge in H
   | |- (_ && _ = true)   => apply andb_true_intro; split
+  | |- (_ || _ = false)  => apply orb_false_intro
   | |- (_ =? _ = true)   => apply Nat.eqb_eq
   | |- (_ =? _ = false)  => apply Nat.eqb_neq
   | |- (_ <=? _ = true)  => apply Nat.leb_le

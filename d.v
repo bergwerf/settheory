@@ -71,7 +71,7 @@ apply unique_choice in F3_func as [f3 Hf3]; exists (λ n i, f3 (n, i)).
 (* Find m such that α is the only element in Eqn m α ∩ X. *)
 intros α [H1α H2α]; apply not_all_ex_not in H2α as [m Hm].
 destruct (pre_decode_surj m α) as [n [H1n H2n]]; exists n.
-assert(Eqn m α ∩ X = Singleton α). {
+assert(Eqn m α ∩ X = ⦃ α ⦄). {
   apply incl_eq; unfold Singleton; intros β Hβ.
   apply NNPP; intros H. apply Hm; now exists β.
   subst β; split. apply eqn_refl. easy. }
@@ -107,9 +107,9 @@ For every natural number n, there exists a set X ⊆ C such that {0} is left
 after n applications of D (n times removing isolated points).
 *)
 Theorem D_n_ex n :
-  ∃X, (D ↑ n) X = {0}.
+  ∃X, (D ↑ n) X = ⦃ zeros ⦄.
 Proof.
-induction n. now exists {0}.
+induction n. now exists ⦃ zeros ⦄.
 destruct IHn as [X HX]; exists (Shifts X).
 apply incl_eq; unfold Singleton; intros α Hα.
 - (* α ≠ zeros is not a limit point. *)
@@ -133,7 +133,7 @@ Abort.
 
 (* Take the limit of D once. *)
 Theorem Lim_D_ex :
-  ∃X, Lim D X = {0}.
+  ∃X, Lim D X = ⦃ zeros ⦄.
 Proof.
 Abort.
 
@@ -146,7 +146,7 @@ first limit ω, then the outer limit is ω times ω which is sometimes denoted a
 Lim (Lim D) X = (⋂ (D ↑ n) X) ∩ (⋂ (D ↑ n) (⋂ (D ↑ n) X)) ∩ ...
 *)
 Theorem Lim_Lim_D_ex :
-  ∃X, Lim (Lim D) X = {0}.
+  ∃X, Lim (Lim D) X = ⦃ zeros ⦄.
 Proof.
 Abort.
 
@@ -156,7 +156,7 @@ iterating this principle over and over again. I believe this corresponds to
 ω^ω^ω^... I do not know if this theorem actually holds, but I suspect it does.
 *)
 Theorem Lim_n_D_ex n :
-  ∃X, (Lim ↑ n) D X = {0}.
+  ∃X, (Lim ↑ n) D X = ⦃ zeros ⦄.
 Proof.
 Abort.
 

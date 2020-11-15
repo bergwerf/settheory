@@ -65,6 +65,7 @@ Arguments ωUnion {_}.
 Arguments ωIsect {_}.
 
 Notation "'∅'" := (EmptySet).
+Notation "⦃ x ⦄" := (Singleton x).
 Notation "V ⊆ W" := (Inclusion V W) (at level 50).
 Notation "V ⊃ W" := (ProperSuperset V W) (at level 50).
 Notation "V ⧵ W" := (Difference V W) (at level 40, left associativity).

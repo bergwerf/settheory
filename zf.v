@@ -32,13 +32,26 @@ Fixpoint closure n φ :=
   end.
 
 (* Compute if there is a free occurence of x in φ. *)
-Fixpoint free x φ : bool :=
+Fixpoint free x φ :=
   match φ with
   | i == j => (i =? x) || (j =? x)
   | i ∈ j => (i =? x) || (j =? x)
   | ¬`ϕ => free x ϕ
   | ϕ ∧` ψ => free x ϕ || free x ψ
   | ∃`i[ϕ] => if i =? x then false else free x ϕ
+  end.
+
+(* Compute if y is free in all free occurences of x. *)
+Fixpoint free_at x y φ :=
+  match φ with
+  | i == j => true
+  | i ∈ j => true
+  | ¬`ϕ => free_at x y ϕ
+  | ϕ ∧` ψ => free_at x y ϕ && free_at x y ψ
+  | ∃`i[ϕ] =>
+      if i =? x then true
+      else if i =? y then negb (free x φ)
+      else free_at x y ϕ
   end.
 
 (* Compute largest variable occuring in φ. *)
@@ -77,7 +90,7 @@ Definition fresh φ := S (max_var φ).
 
 Notation "∀^( n )[ φ ]" := (closure n φ) (format "∀^( n )[ φ ]").
 Notation "φ '\[' i := j ]" := (subst i j φ)
-  (at level 45, format "φ '\[' i := j ]").
+  (at level 30, format "φ '\[' i := j ]").
 
 (* Unique existential quantifiction of x for φ = φ(x). *)
 Definition Exists_unique x φ :=
@@ -230,8 +243,7 @@ revert bound; induction φ; simpl; intros.
 1,2: destruct (i =? x) eqn:I, (j =? x) eqn:J;
 b_Prop; subst; try easy; rewrite H0; lia.
 - auto.
-- apply orb_true_elim in H as [H|H].
-  apply IHf1 in H0; try easy; lia. apply IHf2 in H0; try easy; lia.
+- b_Prop. apply IHf1 in H0; try easy; lia. apply IHf2 in H0; try easy; lia.
 - destruct (i =? x) eqn:E; try easy; b_Prop.
   apply IHf. easy. rewrite set_get2. easy. lia.
 Qed.
@@ -252,6 +264,16 @@ Qed.
 Corollary fvar_le_fresh : fvar φ <= fresh φ.
 Proof. apply count_fvar_le_S_max_var. Qed.
 
+Theorem fresh_free_at x y :
+  y >= fresh φ -> free_at x y φ = true.
+Proof.
+unfold fresh; induction φ; simpl; intros; auto.
+b_Prop. apply IHf1. lia. apply IHf2. lia.
+destruct (i =? x) eqn:X; b_Prop. easy.
+destruct (i =? y) eqn:Y; b_Prop.
+subst; lia. apply IHf; lia.
+Qed.
+
 Theorem subst_eq x :
   φ\[x:=x] = φ.
 Proof.
@@ -260,24 +282,13 @@ induction φ; simpl. 1,2: unfold set.
 now rewrite IHf. now rewrite IHf1, IHf2. rewrite IHf; now destruct (i =? x).
 Qed.
 
-Theorem subst_set_ctx x y :
-  y > max_var φ ->
-  A |= (φ\[x:=y])[Γ] <->
-  A |= (φ)[Γ;x:=Γ y].
+Theorem subst_not_free_eq x y :
+  free x φ = false -> φ\[x:=y] = φ.
 Proof.
-revert Γ; induction φ; simpl; intros; split; intros.
-1-4: unfold set in *; destruct (i =? x) eqn:I, (j =? x) eqn:J; b_Prop;
-subst; try rewrite ?set_get1, ?set_get2 in *; now try rewrite H in *.
-1-2: intros H1; now apply H0, IHf.
-1-2: split; try apply IHf1; try apply IHf2; try easy; lia.
-all: destruct (i =? x) eqn:I, H0 as [v Hv]; b_Prop; subst; exists v.
-- now rewrite set_override.
-- rewrite set_comm; try easy.
-  replace (Γ y) with ((Γ;i:=↓v) y).
-  apply IHf. lia. easy. apply set_get2; lia.
-- now rewrite set_override in Hv.
-- apply IHf. lia. rewrite set_comm, set_get2.
-  easy. lia. lia.
+induction φ; simpl; intros; b_Prop.
+1,2: now rewrite ?set_get2.
+now rewrite IHf. now rewrite IHf1, IHf2.
+destruct (i =? x). easy. now rewrite IHf.
 Qed.
 
 Theorem change_context (Δ : ctx U) :
@@ -298,6 +309,43 @@ revert Γ Δ; induction φ; simpl; intros.
 Qed.
 
 End Part_3.
+
+Section Part_4.
+
+Variable Γ : ctx U.
+Variable φ : formula.
+
+Theorem subst_set_ctx x y :
+  free_at x y φ = true ->
+  A |= (φ\[x:=y])[Γ] <->
+  A |= (φ)[Γ;x:=Γ y].
+Proof.
+revert Γ; induction φ; simpl; intros; split; intros.
+1-4: unfold set in *; destruct (i =? x) eqn:I, (j =? x) eqn:J; b_Prop;
+subst; try rewrite ?set_get1, ?set_get2 in *; now try rewrite H in *.
+1-2: intros H1; now apply H0, IHf.
+1-2: b_Prop; split; try apply IHf1; try apply IHf2; easy.
+all: destruct (i =? x) eqn:I, H0 as [v Hv]; b_Prop; subst; exists v.
+- now rewrite set_override.
+- rewrite set_comm; try easy.
+  destruct (i =? y) eqn:Y; b_Prop.
+  + apply negb_true_iff in H.
+    rewrite subst_not_free_eq in Hv; try easy.
+    eapply change_context. 2: apply Hv. intros j Hj.
+    symmetry; apply set_get2. intros H'; subst; now rewrite H in Hj.
+  + replace (Γ y) with ((Γ;i:=↓v) y).
+    now apply IHf. apply set_get2; lia.
+- now rewrite set_override in Hv.
+- rewrite set_comm in Hv; try easy.
+  destruct (i =? y) eqn:Y; b_Prop.
+  + apply negb_true_iff in H.
+    rewrite subst_not_free_eq; try easy.
+    eapply change_context. 2: apply Hv. intros j Hj.
+    apply set_get2. intros H'; subst; now rewrite H in Hj.
+  + apply IHf. easy. rewrite set_get2. easy. lia.
+Qed.
+
+End Part_4.
 
 End General_proofs.
 
@@ -360,15 +408,27 @@ End Zermelo_Fraenkel_axioms.
 
 (* Frege's comprehension axiom cannot be realized. *)
 Theorem Russells_paradox :
-  ∃φ, ∅ |- Singleton (¬`Schema_of_comprehension φ).
+  ∃φ, ∅ |- ⦃ ¬`Schema_of_comprehension φ ⦄.
 Proof.
 exists (0 ∉ 0).
 intros U A _ φ def; rewrite <-def; clear def φ. intros [uv H].
 replace (fvar (0 ∉ 0) - 1) with 0 in H by now subst.
 replace (fresh (0 ∉ 0)) with 1 in H by now subst.
 apply forall_elim with (u:=uv), iff_elim in H.
-(* It might help to strengthen subst_set_ctx. *)
-Abort.
+rewrite set_comm in H. 2: easy. remember (Γ0;0:=↓uv) as Γ.
+assert(R : (0 ∈ 1)\[1:=0] = 0 ∈ 0) by easy.
+assert(absurd : A |= (0 ∈ 0)[Γ] <-> A |= (0 ∉ 0)[Γ]).
+- split; intros.
+  + apply H. replace (↓uv) with (Γ 0).
+    apply subst_set_ctx. easy. now rewrite R.
+    now rewrite HeqΓ, set_get1.
+  + rewrite <-R. apply subst_set_ctx. easy.
+    replace (Γ 0) with (↓uv). apply H, H0.
+    now rewrite HeqΓ, set_get1.
+- assert(A |= (0 ∉ 0)[Γ]).
+  + intros H1; apply absurd in H1 as H2. now apply H2 in H1.
+  + apply absurd in H0 as H1. now apply H0 in H1.
+Qed.
 
 (* Some axioms also hold in the ordering of the natural numbers. *)
 Section Ordering_of_the_natural_numbers.
@@ -388,6 +448,7 @@ cut(∀i, i < u <-> i < u0).
 - intros. apply forall_elim with (u:=i) in H. now apply iff_elim in H.
 Qed.
 
+(* Union gives the predecessor of n. *)
 Theorem nat_realizes_union :
   NatLt |= Axiom_of_union.
 Proof.
@@ -408,6 +469,7 @@ exists (S l); repeat split. lia. easy.
 intros; destruct k. easy. apply Hl; lia.
 Qed.
 
+(* Regularity gives a smallest number in every definable set. *)
 Theorem nat_realizes_regularity φ :
   fvar φ >= 1 -> NatLt |= Schema_of_regularity φ.
 Proof.
@@ -428,12 +490,11 @@ apply forall_intro; intros; apply implies_intro; intros H H'.
 revert H; simpl; rewrite set_get1, set_get2, set_get1.
 simpl; intros. 2: lia.
 (* Show that we have a contradiction. *)
-apply H2m in H; apply H; clear H.
-eapply subst_set_ctx in H'. 2: unfold fresh in Heqy; lia.
-(* Note that y does not occur in φ. *)
-rewrite set_comm, set_override, set_get1 in H'. 2: lia.
-eapply change_context. 2: apply H'. intros i Hi.
-apply set_get2. apply free_lt_fvar in Hi; lia.
+apply H2m in H; apply H; clear H. eapply subst_set_ctx in H'.
+- rewrite set_comm, set_override, set_get1 in H'. 2: lia.
+  eapply change_context. 2: apply H'. intros i Hi.
+  apply set_get2. apply free_lt_fvar in Hi; lia.
+- apply fresh_free_at; lia.
 Qed.
 
 End Ordering_of_the_natural_numbers.
