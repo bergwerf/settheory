@@ -100,7 +100,7 @@ Definition Exists_unique x φ :=
 Notation "∃! x [ φ ]" := (Exists_unique x φ) (format "∃! x [ φ ]").
 
 End Basic_language_of_set_theory.
-Import Basic_language_of_set_theory.
+Export Basic_language_of_set_theory.
 
 Module Model_definition.
 
@@ -349,6 +349,9 @@ End Part_4.
 
 End General_proofs.
 
+Ltac intro_var x := apply forall_intro; intro x.
+Ltac intro_hyp H := apply implies_intro; intro H.
+
 Section Zermelo_Fraenkel_axioms.
 
 (* 1. Standard model theoretic conventions. *)
@@ -438,13 +441,12 @@ Definition NatLt := (@Logic.eq nat, Peano.lt).
 Theorem nat_realizes_extensionality :
   NatLt |= Axiom_of_extensionality.
 Proof.
-repeat (apply forall_intro; intros).
-apply implies_intro; intros.
-cut(∀i, i < u <-> i < u0).
-- simpl. clear H; revert u0; induction u; intros.
-  destruct u0. easy. exfalso; assert(H0 := H 0); lia.
-  destruct u0. exfalso; assert(H0 := H 0); lia.
-  apply eq_S, IHu. intros; split; intros; assert(Hi := H (S i)); lia.
+intro_var m; intro_var n; intro_hyp H.
+cut(∀i, i < m <-> i < n).
+- simpl. clear H; revert m; induction n; intros.
+  destruct m. easy. exfalso; assert(H0 := H 0); lia.
+  destruct m. exfalso; assert(H0 := H 0); lia.
+  apply eq_S, IHn. intros; split; intros; assert(Hi := H (S i)); lia.
 - intros. apply forall_elim with (u:=i) in H. now apply iff_elim in H.
 Qed.
 
@@ -452,11 +454,10 @@ Qed.
 Theorem nat_realizes_union :
   NatLt |= Axiom_of_union.
 Proof.
-repeat (apply forall_intro; intros).
-exists (pred u). apply forall_intro; intros m.
-apply iff_intro; split; simpl.
-- exists (pred u); split; simpl; lia.
-- intros [n Hn]; lia.
+intro_var n; exists (pred n).
+intro_var m. apply iff_intro; split; simpl.
+- exists (pred n); split; simpl; lia.
+- intros [k Hk]; lia.
 Qed.
 
 Lemma classical_bounded_search (P : nat -> Prop) n :
@@ -481,12 +482,12 @@ assert(x_lt_y : x < y). {
   2: apply fvar_le_fresh. lia. }
 (* Introduce hypothesis. *)
 apply closure_intro; intros. remember (pre x Δ Γ0) as Γ.
-apply implies_intro; intros [w Hw].
+apply implies_intro; intros [n Hn].
 (* Find the smallest number m that satisfies φ. *)
-apply classical_bounded_search with (n:=w) in Hw as [m [_ [H1m H2m]]].
+apply classical_bounded_search with (n:=n) in Hn as [m [_ [H1m H2m]]].
 exists m; split. easy.
-(* Introduce candidate u and show that u < m. *)
-apply forall_intro; intros; apply implies_intro; intros H H'.
+(* Introduce candidate k and show that k < m. *)
+intro_var k; apply implies_intro; intros H H'.
 revert H; simpl; rewrite set_get1, set_get2, set_get1.
 simpl; intros. 2: lia.
 (* Show that we have a contradiction. *)

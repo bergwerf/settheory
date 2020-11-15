@@ -2,7 +2,6 @@
 
 Require Import lib seq zf.
 Require Import List.
-Import ListNotations.
 
 Unset Elimination Schemes.
 Inductive hf : Type := Create : list hf -> hf.
@@ -20,7 +19,7 @@ Fixpoint hf_ind (x : hf) : P x :=
   | Create elm =>
     let fix loop elm :=
       match elm return list_and elm with
-      | [] => I
+      | nil => I
       | y :: elm' => conj (hf_ind y) (loop elm')
       end in
     IH elm (loop elm)
@@ -31,6 +30,11 @@ End Induction_in_hf.
 Arguments forallb {_}.
 Arguments existsb {_}.
 
+Definition elements (x : hf) :=
+  match x with
+  | Create elm => elm
+  end.
+
 Fixpoint hf_eq (x y : hf) {struct x} :=
   match x, y with
   | Create xe, Create ye =>
@@ -39,11 +43,22 @@ Fixpoint hf_eq (x y : hf) {struct x} :=
     xincl && yincl
   end.
 
-Definition hf_in (x y : hf) :=
-  match y with
-  | Create elm => existsb (hf_eq x) elm
-  end.
+Definition hf_in (x y : hf) := existsb (hf_eq x) (elements y).
 
 Definition HF : model hf :=
-  (λ x y, Is_true (hf_eq x y),
-   λ x y, Is_true (hf_in x y)).
+  (λ x y, hf_eq x y = true,
+   λ x y, hf_in x y = true).
+
+Theorem hf_realizes_pairing :
+  HF |= Axiom_of_pairing.
+Proof.
+intro_var x; intro_var y.
+pose(p := Create (x :: y :: nil)); exists p.
+intro_var z; apply iff_intro; split; intros.
+- apply disj_intro; simpl in H.
+  unfold hf_in in H; simpl in H; b_Prop; try easy.
+  now left. now right.
+- simpl; unfold hf_in; simpl.
+  apply disj_elim in H as [H|H]; simpl in H; rewrite H; simpl.
+  easy. now rewrite orb_true_r.
+Qed.
