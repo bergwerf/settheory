@@ -1,6 +1,6 @@
 (* Introducing the axiomatic approach to set theory. *)
 
-Require Import lib seq.
+Require Import lib set seq.
 
 Module Basic_language_of_set_theory.
 
@@ -127,12 +127,15 @@ End Tarski_truth.
 Arguments Realizes {_}.
 Arguments Γ0 {_}.
 
-Notation "↓ x" := (Some x)
-  (at level 20, format "↓ x").
+Notation "↓ x" := (Some x) (at level 20, format "↓ x").
 Notation "A |= ( φ )[ Γ ]" := (Realizes A Γ φ)
   (at level 75, format "A  |=  ( φ )[ Γ ]").
-Notation "A |= φ" := (A |= (φ)[Γ0])
-  (at level 75).
+Notation "A |= φ" := (A |= (φ)[Γ0]) (at level 75).
+
+Definition Logical_consequence (Γ Δ : P formula) :=
+  ∀U, ∀A : model U, (∀φ, Γ φ -> A |= φ) -> ∀φ, Δ φ -> A |= φ.
+
+Notation "Γ |- Δ" := (Logical_consequence Γ Δ) (at level 80).
 
 End Model_definition.
 Import Model_definition.
@@ -311,10 +314,9 @@ Definition Eq_equiv := Eq_refl ∧` Eq_sym ∧` Eq_trans.
 (* 2. Frege's comprehension scheme. *)
 
 Definition Schema_of_comprehension φ :=
-  let n := fvar φ - 1 in
-  let x := fresh φ in
-  let z := S x in
-  ∀^(n)[∃`z[∀`x[x ∈ z <=> φ]]].
+  let x := fvar φ - 1 in
+  let z := fresh φ in
+  ∀^(x)[∃`z[∀`x[x ∈ z <=> φ]]].
 
 (* 3. Zermelo's axioms. *)
 
@@ -333,31 +335,40 @@ Definition Axiom_of_powersets :=
 (* Axiom of infinity: ∃I[∅ ∈ I ∧ ∀n ∈ I[{n, {n}} ∈ I]]. *)
 
 Definition Schema_of_regularity φ :=
-  let n := fvar φ - 1 in
-  let x := fresh φ in
-  let y := S x in
-  ∀^(n)[∃`x[φ] ==> ∃`x[φ ∧` ∀`y[y ∈ x ==> ¬`φ\[x:=y]]]].
+  let x := fvar φ - 1 in
+  let y := fresh φ in
+  ∀^(x)[∃`x[φ] ==> ∃`x[φ ∧` ∀`y[y ∈ x ==> ¬`φ\[x:=y]]]].
 
 Definition Schema_of_specification φ :=
-  let n := fvar φ - 1 in
-  let x := fresh φ in
-  let a := S x in
+  let x := fvar φ - 1 in
+  let a := fresh φ in
   let b := S a in
-  ∀^(n)[∀`a[∃`b[∀`x[x ∈ b <=> x ∈ a ∧` φ]]]].
+  ∀^(x)[∀`a[∃`b[∀`x[x ∈ b <=> x ∈ a ∧` φ]]]].
 
 (* Fraenkels missing schema of replacement. *)
 Definition Schema_of_replacement φ :=
-  let n := fvar φ - 2 in
-  let x := fresh φ in
+  let x := fvar φ - 2 in
   let y := S x in
-  let a := S y in
+  let a := fresh φ in
   let b := S a in
-  ∀^(n)[∀`a[
+  ∀^(x)[∀`a[
     ∀`x[x ∈ a ==> ∃!y[φ]] ==>
     ∃`b[∀`x[x ∈ a ==> ∃`y[y ∈ b ∧` φ]]]
   ]].
 
 End Zermelo_Fraenkel_axioms.
+
+(* Frege's comprehension axiom cannot be realized. *)
+Theorem Russells_paradox :
+  ∃φ, ∅ |- Singleton (¬`Schema_of_comprehension φ).
+Proof.
+exists (0 ∉ 0).
+intros U A _ φ def; rewrite <-def; clear def φ. intros [uv H].
+replace (fvar (0 ∉ 0) - 1) with 0 in H by now subst.
+replace (fresh (0 ∉ 0)) with 1 in H by now subst.
+apply forall_elim with (u:=uv), iff_elim in H.
+(* It might help to strengthen subst_set_ctx. *)
+Abort.
 
 (* Some axioms also hold in the ordering of the natural numbers. *)
 Section Ordering_of_the_natural_numbers.
@@ -401,10 +412,13 @@ Theorem nat_realizes_regularity φ :
   fvar φ >= 1 -> NatLt |= Schema_of_regularity φ.
 Proof.
 intros Hφ; unfold Schema_of_regularity.
-remember (fvar φ - 1) as n;
-remember (fresh φ) as x;
-remember (S x) as y.
-apply closure_intro; intros. remember (pre n Δ Γ0) as Γ.
+remember (fvar φ - 1) as x;
+remember (fresh φ) as y.
+assert(x_lt_y : x < y). {
+  subst. eapply lt_le_trans.
+  2: apply fvar_le_fresh. lia. }
+(* Introduce hypothesis. *)
+apply closure_intro; intros. remember (pre x Δ Γ0) as Γ.
 apply implies_intro; intros [w Hw].
 (* Find the smallest number m that satisfies φ. *)
 apply classical_bounded_search with (n:=w) in Hw as [m [_ [H1m H2m]]].
@@ -415,13 +429,11 @@ revert H; simpl; rewrite set_get1, set_get2, set_get1.
 simpl; intros. 2: lia.
 (* Show that we have a contradiction. *)
 apply H2m in H; apply H; clear H.
-eapply subst_set_ctx in H'. 2: unfold fresh in Heqx; lia.
-(* Simplify context in H'. *)
+eapply subst_set_ctx in H'. 2: unfold fresh in Heqy; lia.
+(* Note that y does not occur in φ. *)
 rewrite set_comm, set_override, set_get1 in H'. 2: lia.
 eapply change_context. 2: apply H'. intros i Hi.
-(* Since y is not a free variable in φ, it has no effect. *)
-apply set_get2. apply free_lt_fvar in Hi.
-assert(fvar φ <= fresh φ) by apply fvar_le_fresh. lia.
+apply set_get2. apply free_lt_fvar in Hi; lia.
 Qed.
 
 End Ordering_of_the_natural_numbers.
