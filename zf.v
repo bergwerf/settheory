@@ -151,7 +151,7 @@ Definition Logical_consequence (Γ Δ : P formula) :=
 Notation "Γ |- Δ" := (Logical_consequence Γ Δ) (at level 80).
 
 End Model_definition.
-Import Model_definition.
+Export Model_definition.
 
 Section General_proofs.
 
