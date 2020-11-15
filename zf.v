@@ -364,10 +364,13 @@ Definition Eq_equiv := Eq_refl ∧` Eq_sym ∧` Eq_trans.
 
 (* 2. Frege's comprehension scheme. *)
 
-Definition Schema_of_comprehension φ :=
+Definition Axiom_of_comprehension φ :=
   let x := fvar φ - 1 in
   let z := fresh φ in
   ∀^(x)[∃`z[∀`x[x ∈ z <=> φ]]].
+
+Definition Schema_of_comprehension ϕ :=
+  ∃φ, fvar φ >= 1 /\ ϕ = Axiom_of_comprehension φ.
 
 (* 3. Zermelo's axioms. *)
 
@@ -385,19 +388,25 @@ Definition Axiom_of_powersets :=
 
 (* Axiom of infinity: ∃I[∅ ∈ I ∧ ∀n ∈ I[{n, {n}} ∈ I]]. *)
 
-Definition Schema_of_regularity φ :=
+Definition Axiom_of_regularity φ :=
   let x := fvar φ - 1 in
   let y := fresh φ in
   ∀^(x)[∃`x[φ] ==> ∃`x[φ ∧` ∀`y[y ∈ x ==> ¬`φ\[x:=y]]]].
 
-Definition Schema_of_specification φ :=
+Definition Schema_of_regularity ϕ :=
+  ∃φ, fvar φ >= 1 /\ ϕ = Axiom_of_regularity φ.
+
+Definition Axiom_of_specification φ :=
   let x := fvar φ - 1 in
   let a := fresh φ in
   let b := S a in
   ∀^(x)[∀`a[∃`b[∀`x[x ∈ b <=> x ∈ a ∧` φ]]]].
 
+Definition Schema_of_specification ϕ :=
+  ∃φ, fvar φ >= 1 /\ ϕ = Axiom_of_specification φ.
+
 (* Fraenkels missing schema of replacement. *)
-Definition Schema_of_replacement φ :=
+Definition Axiom_of_replacement φ :=
   let x := fvar φ - 2 in
   let y := S x in
   let a := fresh φ in
@@ -407,13 +416,17 @@ Definition Schema_of_replacement φ :=
     ∃`b[∀`x[x ∈ a ==> ∃`y[y ∈ b ∧` φ]]]
   ]].
 
+Definition Schema_of_replacement ϕ :=
+  ∃φ, fvar φ >= 2 /\ ϕ = Axiom_of_replacement φ.
+
 End Zermelo_Fraenkel_axioms.
 
 (* Frege's comprehension axiom cannot be realized. *)
 Theorem Russells_paradox :
-  ∃φ, ∅ |- ⦃ ¬`Schema_of_comprehension φ ⦄.
+  ∃φ, Schema_of_comprehension φ /\ ∅ |- ⦃ ¬`φ ⦄.
 Proof.
-exists (0 ∉ 0).
+exists (Axiom_of_comprehension (0 ∉ 0)); split.
+exists (0 ∉ 0); split. now lazy. easy.
 intros U A _ φ def; rewrite <-def; clear def φ. intros [uv H].
 replace (fvar (0 ∉ 0) - 1) with 0 in H by now subst.
 replace (fresh (0 ∉ 0)) with 1 in H by now subst.
@@ -471,17 +484,17 @@ intros; destruct k. easy. apply Hl; lia.
 Qed.
 
 (* Regularity gives a smallest number in every definable set. *)
-Theorem nat_realizes_regularity φ :
-  fvar φ >= 1 -> NatLt |= Schema_of_regularity φ.
+Theorem nat_realizes_regularity ϕ :
+  Schema_of_regularity ϕ -> NatLt |= ϕ.
 Proof.
-intros Hφ; unfold Schema_of_regularity.
+intros [φ [Hφ def]]; subst; unfold Axiom_of_regularity.
 remember (fvar φ - 1) as x;
 remember (fresh φ) as y.
 assert(x_lt_y : x < y). {
   subst. eapply lt_le_trans.
   2: apply fvar_le_fresh. lia. }
 (* Introduce hypothesis. *)
-apply closure_intro; intros. remember (pre x Δ Γ0) as Γ.
+apply closure_intro; intros; remember (pre x Δ Γ0) as Γ.
 apply implies_intro; intros [n Hn].
 (* Find the smallest number m that satisfies φ. *)
 apply classical_bounded_search with (n:=n) in Hn as [m [_ [H1m H2m]]].

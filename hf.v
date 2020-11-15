@@ -7,22 +7,24 @@ Unset Elimination Schemes.
 Inductive hf : Type := Create : list hf -> hf.
 Set Elimination Schemes.
 
+Notation "⟨ l ⟩" := (Create l) (format "⟨ l ⟩").
+
 (* From: https://stackoverflow.com/questions/46838928/#46840045 *)
 Section Induction_in_hf.
 
 Variable P : hf -> Prop.
 Definition list_and := fold_right (λ x, and (P x)) True.
-Hypothesis IH : ∀elm, list_and elm -> P (Create elm).
+Hypothesis IH : ∀el, list_and el -> P ⟨el⟩.
 
 Fixpoint hf_ind (x : hf) : P x :=
   match x with
-  | Create elm =>
-    let fix loop elm :=
-      match elm return list_and elm with
+  | ⟨el⟩ =>
+    let fix loop el :=
+      match el return list_and el with
       | nil => I
-      | y :: elm' => conj (hf_ind y) (loop elm')
+      | y :: el' => conj (hf_ind y) (loop el')
       end in
-    IH elm (loop elm)
+    IH el (loop el)
   end.
 
 End Induction_in_hf.
@@ -32,12 +34,12 @@ Arguments existsb {_}.
 
 Definition elements (x : hf) :=
   match x with
-  | Create elm => elm
+  | ⟨el⟩ => el
   end.
 
 Fixpoint hf_eq (x y : hf) {struct x} :=
   match x, y with
-  | Create xe, Create ye =>
+  | ⟨xe⟩, ⟨ye⟩ =>
     let xincl := forallb (λ x', existsb (λ y', hf_eq x' y') ye) xe in
     let yincl := forallb (λ y', existsb (λ x', hf_eq x' y') xe) ye in
     xincl && yincl
@@ -53,7 +55,7 @@ Theorem hf_realizes_pairing :
   HF |= Axiom_of_pairing.
 Proof.
 intro_var x; intro_var y.
-pose(p := Create (x :: y :: nil)); exists p.
+pose(p := ⟨x :: y :: nil⟩); exists p.
 intro_var z; apply iff_intro; split; intros.
 - apply disj_intro; simpl in H.
   unfold hf_in in H; simpl in H; b_Prop; try easy.
@@ -62,3 +64,30 @@ intro_var z; apply iff_intro; split; intros.
   apply disj_elim in H as [H|H]; simpl in H; rewrite H; simpl.
   easy. now rewrite orb_true_r.
 Qed.
+
+Theorem list_specification {T} (l : list T) P :
+  ∃l', ∀x, In x l' <-> In x l /\ P x.
+Proof.
+induction l. now exists nil.
+destruct IHl as [l' IH], (classic (P a)).
+- exists (a :: l'); split.
+  + intros [Ha|Ha]; subst. split. apply in_eq. easy.
+    apply IH in Ha; split. now apply in_cons. easy.
+  + intros [[Ha|Ha] Hx]; subst.
+    apply in_eq. now apply in_cons, IH.
+- exists l'; split.
+  intros Hx; apply IH in Hx. split. now apply in_cons. easy.
+  intros [[Ha|Ha] Hx]; subst. easy. now apply IH.
+Qed.
+
+Theorem hf_realizes_specification ϕ :
+  Schema_of_specification ϕ -> HF |= ϕ.
+Proof.
+intros [φ [Hϕ def]]; subst; unfold Axiom_of_specification.
+remember (fvar φ - 1) as x; remember (fresh φ) as a; remember (S a) as b.
+apply closure_intro; intros; remember (pre x Δ Γ0) as Γ.
+intro_var a'; destruct a' as [a'].
+pose(spec e := HF |= (φ)[Γ;x:=↓e]).
+destruct (list_specification a' spec) as [b' Hb'].
+exists ⟨b'⟩; intro_var e; apply iff_intro; split; intros.
+Abort.
