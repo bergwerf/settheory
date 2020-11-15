@@ -6,11 +6,11 @@ Module Basic_language_of_set_theory.
 
 (* Formulae in the basic language of set-theory. *)
 Inductive formula :=
-  | IsEqual (x y : nat)
-  | ElementOf (x y : nat)
+  | IsEqual (i j : nat)
+  | ElementOf (i j : nat)
   | Negation (φ : formula)
   | Conjunction (φ ϕ : formula)
-  | Exists (x : nat) (φ : formula).
+  | Exists (i : nat) (φ : formula).
 
 Notation "i == j" := (IsEqual i j) (at level 40).
 Notation "i ∈ j" := (ElementOf i j) (at level 40).
@@ -31,43 +31,52 @@ Fixpoint closure n φ :=
   | S m => closure m (∀`m[φ])
   end.
 
-(* Map formula variables. *)
-Definition subst (i j v : nat) := if v =? i then j else v.
-Fixpoint mapf f φ :=
+(* Compute if there is a free occurence of x in φ. *)
+Fixpoint free x φ : bool :=
   match φ with
-  | i == j => f i == f j
-  | i ∈ j => f i ∈ f j
-  | ¬`ϕ => ¬`mapf f ϕ
-  | ϕ ∧` ψ => mapf f ϕ ∧` mapf f ψ
-  | ∃`x[ϕ] => ∃`x[mapf f ϕ]
+  | i == j => (i =? x) || (j =? x)
+  | i ∈ j => (i =? x) || (j =? x)
+  | ¬`ϕ => free x ϕ
+  | ϕ ∧` ψ => free x ϕ || free x ψ
+  | ∃`i[ϕ] => if i =? x then false else free x ϕ
   end.
 
-(* Compute if a variable occurs freely. *)
-Fixpoint free y φ : bool :=
+(* Compute largest variable occuring in φ. *)
+Fixpoint max_var φ :=
   match φ with
-  | i == j => (i =? y) || (j =? y)
-  | i ∈ j => (i =? y) || (j =? y)
-  | ¬`ϕ => free y ϕ
-  | ϕ ∧` ψ => free y ϕ || free y ψ
-  | ∃`x[ϕ] => if x =? y then false else free y ϕ
+  | i == j => max i j
+  | i ∈ j => max i j
+  | ¬`ϕ => max_var ϕ
+  | ϕ ∧` ψ => max (max_var ϕ) (max_var ψ)
+  | ∃`i[ϕ] => max i (max_var ϕ)
   end.
 
-(* Compute upper bound on free variables. *)
-Definition fv (Γ : nat -> bool) i := if Γ i then 0 else S i.
-Fixpoint max_fv (Γ : nat -> bool) φ :=
+(* Compute upper bound on the number of free variables. *)
+Fixpoint count_fvar (Γ : nat -> bool) φ :=
+  let f := λ i, if Γ i then 0 else S i in
   match φ with
-  | i == j => max (fv Γ i) (fv Γ j)
-  | i ∈ j => max (fv Γ i) (fv Γ j)
-  | ¬`ϕ => max_fv Γ ϕ
-  | ϕ ∧` ψ => max (max_fv Γ ϕ) (max_fv Γ ψ)
-  | ∃`x[ϕ] => max_fv (Γ;x:=true) ϕ
+  | i == j => max (f i) (f j)
+  | i ∈ j => max (f i) (f j)
+  | ¬`ϕ => count_fvar Γ ϕ
+  | ϕ ∧` ψ => max (count_fvar Γ ϕ) (count_fvar Γ ψ)
+  | ∃`x[ϕ] => count_fvar (Γ;x:=true) ϕ
   end.
 
-Definition FV φ := max_fv (const false) φ.
-Definition fresh φ := FV φ.
+(* Replace free occurrences of x with y. *)
+Fixpoint subst x y φ :=
+  match φ with
+  | i == j => (id;x:=y) i == (id;x:=y) j
+  | i ∈ j => (id;x:=y) i ∈ (id;x:=y) j
+  | ¬`ϕ => ¬`subst x y ϕ
+  | ϕ ∧` ψ => subst x y ϕ ∧` subst x y ψ
+  | ∃`i[ϕ] => ∃`i[if i =? x then ϕ else subst x y ϕ]
+  end.
+
+Definition fvar φ := count_fvar (const false) φ.
+Definition fresh φ := S (max_var φ).
 
 Notation "∀^( n )[ φ ]" := (closure n φ) (format "∀^( n )[ φ ]").
-Notation "φ '\[' i := j ]" := (mapf (subst i j) φ)
+Notation "φ '\[' i := j ]" := (subst i j φ)
   (at level 45, format "φ '\[' i := j ]").
 
 (* Unique existential quantifiction of x for φ = φ(x). *)
@@ -118,7 +127,8 @@ End Tarski_truth.
 Arguments Realizes {_}.
 Arguments Γ0 {_}.
 
-Notation "↓ x" := (Some x) (at level 20, format "↓ x").
+Notation "↓ x" := (Some x)
+  (at level 20, format "↓ x").
 Notation "A |= ( φ )[ Γ ]" := (Realizes A Γ φ)
   (at level 75, format "A  |=  ( φ )[ Γ ]").
 Notation "A |= φ" := (A |= (φ)[Γ0])
@@ -210,10 +220,67 @@ Section Part_3.
 Variable Γ : ctx U.
 Variable φ : formula.
 
-Theorem change_context (Δ : ctx U) :
-  (∀i, free i φ = true -> Γ i = Δ i) -> A |= (φ)[Γ] -> A |= (φ)[Δ].
+Theorem free_lt_count_fvar bound x :
+  free x φ = true -> bound x = false -> x < count_fvar bound φ.
 Proof.
-unfold FV; revert Γ Δ; induction φ; simpl; intros.
+revert bound; induction φ; simpl; intros.
+1,2: destruct (i =? x) eqn:I, (j =? x) eqn:J;
+b_Prop; subst; try easy; rewrite H0; lia.
+- auto.
+- apply orb_true_elim in H as [H|H].
+  apply IHf1 in H0; try easy; lia. apply IHf2 in H0; try easy; lia.
+- destruct (i =? x) eqn:E; try easy; b_Prop.
+  apply IHf. easy. rewrite set_get2. easy. lia.
+Qed.
+
+Corollary free_lt_fvar x : free x φ = true -> x < fvar φ.
+Proof. intros; now apply free_lt_count_fvar. Qed.
+
+Theorem count_fvar_le_S_max_var bound :
+  count_fvar bound φ <= S (max_var φ).
+Proof.
+revert bound; induction φ; simpl; intros.
+1,2: destruct (bound i), (bound j); lia.
+- assert(IH := IHf bound); lia.
+- assert(IH1 := IHf1 bound); assert(IH2 := IHf2 bound); lia.
+- assert(IH := IHf (bound;i:=true)); lia.
+Qed.
+
+Corollary fvar_le_fresh : fvar φ <= fresh φ.
+Proof. apply count_fvar_le_S_max_var. Qed.
+
+Theorem subst_eq x :
+  φ\[x:=x] = φ.
+Proof.
+induction φ; simpl. 1,2: unfold set.
+1,2: destruct (i =? x) eqn:I, (j =? x) eqn:J; b_Prop; now subst.
+now rewrite IHf. now rewrite IHf1, IHf2. rewrite IHf; now destruct (i =? x).
+Qed.
+
+Theorem subst_set_ctx x y :
+  y > max_var φ ->
+  A |= (φ\[x:=y])[Γ] <->
+  A |= (φ)[Γ;x:=Γ y].
+Proof.
+revert Γ; induction φ; simpl; intros; split; intros.
+1-4: unfold set in *; destruct (i =? x) eqn:I, (j =? x) eqn:J; b_Prop;
+subst; try rewrite ?set_get1, ?set_get2 in *; now try rewrite H in *.
+1-2: intros H1; now apply H0, IHf.
+1-2: split; try apply IHf1; try apply IHf2; try easy; lia.
+all: destruct (i =? x) eqn:I, H0 as [v Hv]; b_Prop; subst; exists v.
+- now rewrite set_override.
+- rewrite set_comm; try easy.
+  replace (Γ y) with ((Γ;i:=↓v) y).
+  apply IHf. lia. easy. apply set_get2; lia.
+- now rewrite set_override in Hv.
+- apply IHf. lia. rewrite set_comm, set_get2.
+  easy. lia. lia.
+Qed.
+
+Theorem change_context (Δ : ctx U) :
+  (∀x, free x φ = true -> Γ x = Δ x) -> A |= (φ)[Γ] -> A |= (φ)[Δ].
+Proof.
+revert Γ Δ; induction φ; simpl; intros.
 1,2: erewrite <-H, <-H; try easy; now rewrite Nat.eqb_refl, ?orb_true_r.
 - intros H'; apply H0.
   eapply IHf. 2: apply H'.
@@ -221,31 +288,11 @@ unfold FV; revert Γ Δ; induction φ; simpl; intros.
 - split. apply IHf1 with (Γ:=Γ); try easy. 2: eapply IHf2 with (Γ:=Γ); try easy.
   all: intros i Hi; apply H; now rewrite Hi, ?orb_true_r.
 - destruct H0 as [u Hu]; exists u.
-  eapply IHf. 2: apply Hu. intros i Hi.
-  destruct (eq_dec x i). subst; now rewrite ?set_get1.
+  eapply IHf. 2: apply Hu. intros j Hj.
+  destruct (eq_dec i j). subst; now rewrite ?set_get1.
   rewrite ?set_get2; try lia. apply H.
-  now replace (x =? i) with false by b_lia.
+  now replace (i =? j) with false by b_lia.
 Qed.
-
-Lemma free_max_fv bound x :
-  free x φ = true -> bound x = false -> x < max_fv bound φ.
-Proof.
-revert bound; unfold FV; induction φ; simpl; intros.
-1,2: unfold fv; destruct (x0 =? x) eqn:H1, (y =? x) eqn:H2;
-b_Prop; subst; try easy; rewrite H0; lia.
-- auto.
-- apply orb_true_elim in H as [H|H].
-  apply IHf1 in H0; try easy; lia. apply IHf2 in H0; try easy; lia.
-- destruct (x0 =? x) eqn:E; try easy; b_Prop.
-  apply IHf. easy. rewrite set_get2. easy. lia.
-Qed.
-
-Theorem subst_elim x y u :
-  Γ y = Some u ->
-  A |= (φ\[x:=y])[Γ] ->
-  A |= (φ)[Γ;x:=↓u].
-Proof.
-Admitted.
 
 End Part_3.
 
@@ -264,8 +311,8 @@ Definition Eq_equiv := Eq_refl ∧` Eq_sym ∧` Eq_trans.
 (* 2. Frege's comprehension scheme. *)
 
 Definition Schema_of_comprehension φ :=
-  let n := FV φ - 1 in
-  let x := n in
+  let n := fvar φ - 1 in
+  let x := fresh φ in
   let z := S x in
   ∀^(n)[∃`z[∀`x[x ∈ z <=> φ]]].
 
@@ -286,22 +333,22 @@ Definition Axiom_of_powersets :=
 (* Axiom of infinity: ∃I[∅ ∈ I ∧ ∀n ∈ I[{n, {n}} ∈ I]]. *)
 
 Definition Schema_of_regularity φ :=
-  let n := FV φ - 1 in
-  let x := n in
+  let n := fvar φ - 1 in
+  let x := fresh φ in
   let y := S x in
   ∀^(n)[∃`x[φ] ==> ∃`x[φ ∧` ∀`y[y ∈ x ==> ¬`φ\[x:=y]]]].
 
 Definition Schema_of_specification φ :=
-  let n := FV φ - 1 in
-  let x := n in
+  let n := fvar φ - 1 in
+  let x := fresh φ in
   let a := S x in
   let b := S a in
   ∀^(n)[∀`a[∃`b[∀`x[x ∈ b <=> x ∈ a ∧` φ]]]].
 
 (* Fraenkels missing schema of replacement. *)
 Definition Schema_of_replacement φ :=
-  let n := FV φ - 2 in
-  let x := n in
+  let n := fvar φ - 2 in
+  let x := fresh φ in
   let y := S x in
   let a := S y in
   let b := S a in
@@ -351,22 +398,30 @@ intros; destruct k. easy. apply Hl; lia.
 Qed.
 
 Theorem nat_realizes_regularity φ :
-  FV φ >= 1 -> NatLt |= Schema_of_regularity φ.
+  fvar φ >= 1 -> NatLt |= Schema_of_regularity φ.
 Proof.
 intros Hφ; unfold Schema_of_regularity.
-remember (FV φ - 1) as x; remember (S x) as y.
-apply closure_intro; intros. remember (pre x Δ Γ0) as Γ.
+remember (fvar φ - 1) as n;
+remember (fresh φ) as x;
+remember (S x) as y.
+apply closure_intro; intros. remember (pre n Δ Γ0) as Γ.
 apply implies_intro; intros [w Hw].
+(* Find the smallest number m that satisfies φ. *)
 apply classical_bounded_search with (n:=w) in Hw as [m [_ [H1m H2m]]].
 exists m; split. easy.
+(* Introduce candidate u and show that u < m. *)
 apply forall_intro; intros; apply implies_intro; intros H H'.
-revert H; simpl; rewrite set_get1, set_get2, set_get1. 2: lia.
-simpl; intros. apply H2m in H; apply H; clear H.
-eapply subst_elim in H'. 2: apply set_get1.
-rewrite set_comm, set_override in H'. 2: lia.
-eapply change_context; intros. 2: apply H'.
-apply free_max_fv with (bound:=const false) in H.
-rewrite set_get2. easy. unfold FV in Heqx; lia. easy.
+revert H; simpl; rewrite set_get1, set_get2, set_get1.
+simpl; intros. 2: lia.
+(* Show that we have a contradiction. *)
+apply H2m in H; apply H; clear H.
+eapply subst_set_ctx in H'. 2: unfold fresh in Heqx; lia.
+(* Simplify context in H'. *)
+rewrite set_comm, set_override, set_get1 in H'. 2: lia.
+eapply change_context. 2: apply H'. intros i Hi.
+(* Since y is not a free variable in φ, it has no effect. *)
+apply set_get2. apply free_lt_fvar in Hi.
+assert(fvar φ <= fresh φ) by apply fvar_le_fresh. lia.
 Qed.
 
 End Ordering_of_the_natural_numbers.
