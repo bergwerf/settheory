@@ -458,7 +458,7 @@ assert(absurd : A |= (0 ∈ 0)[Γ] <-> A |= (0 ∉ 0)[Γ]).
   + apply absurd in H0 as H1. now apply H0 in H1.
 Qed.
 
-(* Eq_equivalence is satisfied by any equivalence relation. *)
+(* Eq_equivalence is realized by any equivalence relation. *)
 Theorem realize_equivalence {U} (A : model U) :
   Equivalence (fst A) -> A |= Eq_equivalence.
 Proof.
