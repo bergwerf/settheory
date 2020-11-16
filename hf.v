@@ -1,7 +1,7 @@
 (* ZF model of Hereditarily Finite sets. *)
 
 Require Import lib seq zf.
-Require Import List.
+Require Import List RelationClasses.
 
 Unset Elimination Schemes.
 Inductive hf : Type := Create : list hf -> hf.
@@ -13,16 +13,15 @@ Notation "⟨ l ⟩" := (Create l) (format "⟨ l ⟩").
 Section Induction_in_hf.
 
 Variable P : hf -> Prop.
-Definition list_and := fold_right (λ x, and (P x)) True.
-Hypothesis IH : ∀el, list_and el -> P ⟨el⟩.
+Hypothesis IH : ∀el, Forall P el -> P ⟨el⟩.
 
 Fixpoint hf_ind (x : hf) : P x :=
   match x with
   | ⟨el⟩ =>
     let fix loop el :=
-      match el return list_and el with
-      | nil => I
-      | y :: el' => conj (hf_ind y) (loop el')
+      match el return Forall P el with
+      | nil => @Forall_nil hf P
+      | e :: etl => @Forall_cons hf P e etl (hf_ind e) (loop etl)
       end in
     IH el (loop el)
   end.
@@ -37,19 +36,47 @@ Definition elements (x : hf) :=
   | ⟨el⟩ => el
   end.
 
-Fixpoint hf_eq (x y : hf) {struct x} :=
+Fixpoint hf_eqb (x y : hf) {struct x} :=
   match x, y with
   | ⟨xe⟩, ⟨ye⟩ =>
-    let xincl := forallb (λ x', existsb (λ y', hf_eq x' y') ye) xe in
-    let yincl := forallb (λ y', existsb (λ x', hf_eq x' y') xe) ye in
+    let xincl := forallb (λ x', existsb (λ y', hf_eqb x' y') ye) xe in
+    let yincl := forallb (λ y', existsb (λ x', hf_eqb x' y') xe) ye in
     xincl && yincl
   end.
 
-Definition hf_in (x y : hf) := existsb (hf_eq x) (elements y).
+Definition hf_inb (x y : hf) := existsb (hf_eqb x) (elements y).
+Definition hf_eq x y := hf_eqb x y = true.
+Definition hf_in x y := hf_inb x y = true.
+Definition HF : model hf := (hf_eq, hf_in).
 
-Definition HF : model hf :=
-  (λ x y, hf_eq x y = true,
-   λ x y, hf_in x y = true).
+Instance hf_eq_equivalence :
+  Equivalence hf_eq.
+Proof.
+unfold hf_eq; repeat split.
+- intros x; induction x; simpl; b_Prop.
+  all: apply forallb_forall; intros; apply existsb_exists.
+  all: exists x; split; try easy.
+  all: now apply Forall_forall with (x:=x) in H.
+- intros x; induction x; intros [l].
+  simpl; intros; b_Prop; intros.
+  all: apply forallb_forall; intros; apply existsb_exists.
+  all: eapply forallb_forall in H2 as H3. 2: apply H1. 3: apply H0.
+  all: apply existsb_exists in H3 as [y [H4 H5]].
+  all: exists y; split; try easy.
+  1: eapply Forall_forall in H4 as IH.
+  3: eapply Forall_forall in H2 as IH.
+  2,4: apply H. all: now apply IH.
+- intros x; induction x; intros [el1] [el2]; simpl; intros; b_Prop.
+  all: apply forallb_forall; intros; apply existsb_exists.
+  all: eapply forallb_forall in H4 as H5. 2: apply H0. 3: apply H2.
+  all: apply existsb_exists in H5 as [y [H6 H7]].
+  all: eapply forallb_forall in H6. 2: apply H1. 3: apply H3.
+  all: apply existsb_exists in H6 as [z [H8 H9]].
+  all: exists z; split; try easy.
+  1: eapply Forall_forall in H4 as IH.
+  3: eapply Forall_forall in H8 as IH.
+  2,4: apply H. all: now apply IH with (y:=y).
+Qed.
 
 Theorem hf_realizes_pairing :
   HF |= Axiom_of_pairing.
@@ -58,10 +85,11 @@ intro_var x; intro_var y.
 pose(p := ⟨x :: y :: nil⟩); exists p.
 intro_var z; apply iff_intro; split; intros.
 - apply disj_intro; simpl in H.
-  unfold hf_in in H; simpl in H; b_Prop; try easy.
-  now left. now right.
-- simpl; unfold hf_in; simpl.
-  apply disj_elim in H as [H|H]; simpl in H; rewrite H; simpl.
+  unfold hf_in, hf_inb in H; simpl in H.
+  b_Prop; try easy; simpl; auto.
+- simpl; unfold hf_in, hf_inb; simpl.
+  apply disj_elim in H as [H|H]; simpl in H;
+  unfold hf_eq in H; rewrite H; simpl.
   easy. now rewrite orb_true_r.
 Qed.
 
