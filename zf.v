@@ -1,6 +1,7 @@
 (* Introducing the axiomatic approach to set theory. *)
 
 Require Import lib set seq.
+Require Import RelationClasses.
 
 Module Basic_language_of_set_theory.
 
@@ -360,7 +361,7 @@ Definition Not_empty := ∃`0[0 == 0].
 Definition Eq_refl := ∀`0[0 == 0].
 Definition Eq_sym := ∀`0[∀`1[0 == 1 ==> 1 == 0]].
 Definition Eq_trans := ∀`0[∀`1[∀`2[0 == 1 ∧` 1 == 2 ==> 0 == 2]]].
-Definition Eq_equiv := Eq_refl ∧` Eq_sym ∧` Eq_trans.
+Definition Eq_equivalence := Eq_refl ∧` Eq_sym ∧` Eq_trans.
 
 (* 2. Frege's comprehension scheme. *)
 
@@ -419,6 +420,17 @@ Definition Axiom_of_replacement φ :=
 Definition Schema_of_replacement ϕ :=
   ∃φ, fvar φ >= 2 /\ ϕ = Axiom_of_replacement φ.
 
+Definition ZF_finite :=
+  ⦃ Not_empty ⦄ ∪
+  ⦃ Eq_equivalence ⦄ ∪
+  ⦃ Axiom_of_extensionality ⦄ ∪
+  ⦃ Axiom_of_pairing ⦄ ∪
+  ⦃ Axiom_of_union ⦄ ∪
+  ⦃ Axiom_of_powersets ⦄ ∪
+  Schema_of_regularity ∪
+  Schema_of_specification ∪
+  Schema_of_replacement.
+
 End Zermelo_Fraenkel_axioms.
 
 (* Frege's comprehension axiom cannot be realized. *)
@@ -444,6 +456,18 @@ assert(absurd : A |= (0 ∈ 0)[Γ] <-> A |= (0 ∉ 0)[Γ]).
 - assert(A |= (0 ∉ 0)[Γ]).
   + intros H1; apply absurd in H1 as H2. now apply H2 in H1.
   + apply absurd in H0 as H1. now apply H0 in H1.
+Qed.
+
+(* Eq_equivalence is satisfied by any equivalence relation. *)
+Theorem realize_equivalence {U} (A : model U) :
+  Equivalence (fst A) -> A |= Eq_equivalence.
+Proof.
+intros [R S T]; repeat split.
+- intro_var x; simpl; apply R.
+- intro_var x; intro_var y; intro_hyp H; simpl in *; now apply S.
+- intro_var x; intro_var y; intro_var z.
+  intro_hyp H; destruct H; simpl in *.
+  eapply T. apply H. easy.
 Qed.
 
 (* Some axioms also hold in the ordering of the natural numbers. *)

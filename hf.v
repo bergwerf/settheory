@@ -119,3 +119,8 @@ pose(spec e := HF |= (φ)[Γ;x:=↓e]).
 destruct (list_specification a' spec) as [b' Hb'].
 exists ⟨b'⟩; intro_var e; apply iff_intro; split; intros.
 Abort.
+
+Theorem hf_realizes_zf_finite φ :
+  ZF_finite φ -> HF |= φ.
+Proof.
+Abort.
