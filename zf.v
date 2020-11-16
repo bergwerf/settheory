@@ -358,10 +358,10 @@ Section Zermelo_Fraenkel_axioms.
 (* 1. Standard model theoretic conventions. *)
 
 Definition Not_empty := ∃`0[0 == 0].
-Definition Eq_refl := ∀`0[0 == 0].
-Definition Eq_sym := ∀`0[∀`1[0 == 1 ==> 1 == 0]].
-Definition Eq_trans := ∀`0[∀`1[∀`2[0 == 1 ∧` 1 == 2 ==> 0 == 2]]].
-Definition Eq_equivalence := Eq_refl ∧` Eq_sym ∧` Eq_trans.
+Definition Eq_reflexive := ∀`0[0 == 0].
+Definition Eq_symmetric := ∀`0[∀`1[0 == 1 ==> 1 == 0]].
+Definition Eq_transitive := ∀`0[∀`1[∀`2[0 == 1 ∧` 1 == 2 ==> 0 == 2]]].
+Definition Eq_equivalence := Eq_reflexive ∧` Eq_symmetric ∧` Eq_transitive.
 
 (* 2. Frege's comprehension scheme. *)
 
