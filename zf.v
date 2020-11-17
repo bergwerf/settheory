@@ -28,6 +28,7 @@ Notation "φ ==> ϕ" := (¬`(φ ∧` ¬`ϕ)) (at level 70).
 Notation "φ <=> ϕ" := ((φ ==> ϕ) ∧` (ϕ ==> φ)) (at level 70).
 Notation "∃` x [ φ ]" := (Exists x φ) (format "∃` x [ φ ]").
 Notation "∀` x [ φ ]" := (¬`∃`x[¬`φ]) (format "∀` x [ φ ]").
+Notation "⊤" := (∀`0[0 == 0]).
 
 (* Universal quantification of n variables. *)
 Fixpoint closure n φ :=
@@ -122,7 +123,16 @@ Definition Exists_unique x φ :=
   let z := fresh φ in
   ∃`x[φ ∧` ∀`z[φ\[x:=z] ==> x == z]].
 
-Notation "∃! x [ φ ]" := (Exists_unique x φ) (format "∃! x [ φ ]").
+Notation "∃!` x [ φ ]" := (Exists_unique x φ) (format "∃!` x [ φ ]").
+
+(* Export a list of all defining formulas in the given term. *)
+Fixpoint function_axioms x :=
+  match x with
+  | Var _ => ⊤
+  | Const φ => ∃!`0[φ]
+  | Func φ x => ∀`0[∃!`1[φ]] ∧` function_axioms x
+  | BFunc φ x y => ∀`0[∀`1[∃!`2[φ]]] ∧` function_axioms x ∧` function_axioms y
+  end.
 
 End Formal_language_of_set_theory.
 Export Formal_language_of_set_theory.
@@ -167,15 +177,10 @@ with Materializes (Γ : ctx U) (z : term) (z' : U) : Prop :=
   match z with
   | Var i => Γ i = ↓z'
   | Const def =>
-    fvar def = 1 /\ (∃!v, Realizes (Γ0;0:=↓v) def) /\
     Realizes (Γ0;0:=↓z') def
-  | Func def x =>
-    fvar def = 2 /\ (∀u, ∃!v, Realizes (Γ0;0:=↓u;1:=↓v) def)
-    /\ ∃x', Materializes Γ x x' /\
+  | Func def x => ∃x', Materializes Γ x x' /\
     Realizes (Γ0;0:=↓x';1:=↓z') def
-  | BFunc def x y =>
-    fvar def = 3 /\ (∀u u', ∃!v, Realizes (Γ0;0:=↓u;1:=u';2:=↓v) def)
-    /\ ∃x' y', Materializes Γ x x' /\ Materializes Γ y y' /\
+  | BFunc def x y => ∃x' y', Materializes Γ x x' /\ Materializes Γ y y' /\
     Realizes (Γ0;0:=↓x';1:=↓y';2:=↓z') def
   end.
 
@@ -432,6 +437,14 @@ all: destruct (i =? x) eqn:I, H0 as [v Hv]; b_Prop; subst; exists v.
 Qed.*)
 Admitted.
 
+(* Every term can be materialized in a unique way. *)
+Theorem unique_materialization x :
+  A |= function_axioms x ->
+  (∀i, In i (vars x) -> Γ i ≠ None) ->
+  ∃!u, Materializes A Γ x u.
+Proof.
+Abort.
+
 End Part_4.
 
 End Model_tools.
@@ -497,7 +510,7 @@ Definition Axiom_of_replacement φ :=
   let a := fresh φ in
   let b := S a in
   ∀^(x)[∀`a[
-    ∀`x[x ∈ a ==> ∃!y[φ]] ==>
+    ∀`x[x ∈ a ==> ∃!`y[φ]] ==>
     ∃`b[∀`x[x ∈ a ==> ∃`y[y ∈ b ∧` φ]]]
   ]].
 
@@ -516,6 +529,17 @@ Definition ZF_finite :=
   Schema_of_replacement.
 
 End Zermelo_Fraenkel_axioms.
+
+(* Eq_equivalence is realized by any equivalence relation. *)
+Theorem realize_equivalence {U} (A : model U) :
+  Equivalence (fst A) -> A |= Eq_equivalence.
+Proof.
+intros [R S T]. fsplit; fsplit.
+- fintro x; apply R.
+- fintro x; fintro y; fhyp H. now apply S.
+- fintro x; fintro y; fintro z; fhyp_split H1 H2.
+  eapply T. apply H1. easy.
+Qed.
 
 (* Frege's comprehension axiom cannot be realized. *)
 Theorem Russells_paradox :
@@ -540,17 +564,6 @@ assert(absurd : A |= (0 ∈ 0)[Γ] <-> A |= (0 ∉ 0)[Γ]).
 - assert(A |= (0 ∉ 0)[Γ]).
   + fsuppose H1; apply absurd in H1 as H2. now apply H2 in H1.
   + apply absurd in H0 as H1. now apply H0 in H1.
-Qed.
-
-(* Eq_equivalence is realized by any equivalence relation. *)
-Theorem realize_equivalence {U} (A : model U) :
-  Equivalence (fst A) -> A |= Eq_equivalence.
-Proof.
-intros [R S T]. fsplit; fsplit.
-- fintro x; apply R.
-- fintro x; fintro y; fhyp H. now apply S.
-- fintro x; fintro y; fintro z; fhyp_split H1 H2.
-  eapply T. apply H1. easy.
 Qed.
 
 (* Some axioms also hold in the ordering of the natural numbers. *)
