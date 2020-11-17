@@ -1,23 +1,20 @@
 (* ZF model of Hereditarily Finite sets. *)
 
 Require Import lib seq zf.
-Require Import List RelationClasses.
 
 Unset Elimination Schemes.
-Inductive hf : Type := Create : list hf -> hf.
+Inductive hf : Type := HFSet : list hf -> hf.
 Set Elimination Schemes.
-
-Notation "⟨ l ⟩" := (Create l) (format "⟨ l ⟩").
 
 (* From: https://stackoverflow.com/questions/46838928/#46840045 *)
 Section Induction_in_hf.
 
 Variable P : hf -> Prop.
-Hypothesis IH : ∀el, Forall P el -> P ⟨el⟩.
+Hypothesis IH : ∀el, Forall P el -> P (HFSet el).
 
 Fixpoint hf_ind (x : hf) : P x :=
   match x with
-  | ⟨el⟩ =>
+  | HFSet el =>
     let fix loop el :=
       match el return Forall P el with
       | nil => @Forall_nil hf P
@@ -33,12 +30,12 @@ Arguments existsb {_}.
 
 Definition elements (x : hf) :=
   match x with
-  | ⟨el⟩ => el
+  | HFSet el => el
   end.
 
 Fixpoint hf_eqb (x y : hf) {struct x} :=
   match x, y with
-  | ⟨xe⟩, ⟨ye⟩ =>
+  | HFSet xe, HFSet ye =>
     let xincl := forallb (λ x', existsb (λ y', hf_eqb x' y') ye) xe in
     let yincl := forallb (λ y', existsb (λ x', hf_eqb x' y') xe) ye in
     xincl && yincl
@@ -77,6 +74,9 @@ unfold hf_eq; repeat split.
   3: eapply Forall_forall in H8 as IH.
   2,4: apply H. all: now apply IH with (y:=y).
 Qed.
+
+(*
+These theorems are outdated.
 
 Theorem hf_realizes_pairing :
   HF |= Axiom_of_pairing.
@@ -124,3 +124,4 @@ Theorem hf_realizes_zf_finite φ :
   ZF_finite φ -> HF |= φ.
 Proof.
 Abort.
+*)

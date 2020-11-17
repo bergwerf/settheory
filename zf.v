@@ -1,23 +1,27 @@
 (* Introducing the axiomatic approach to set theory. *)
 
 Require Import lib set seq.
-Require Import RelationClasses.
 
-Module Basic_language_of_set_theory.
+Module Formal_language_of_set_theory.
 
-(* Formulae in the basic language of set-theory. *)
+(* Formulae in the language of set-theory. *)
 Inductive formula :=
-  | IsEqual (i j : nat)
-  | ElementOf (i j : nat)
+  | IsEqual (x y : term)
+  | ElementOf (x y : term)
   | Negation (φ : formula)
   | Conjunction (φ ϕ : formula)
-  | Exists (i : nat) (φ : formula).
+  | Exists (k : nat) (φ : formula)
+with term :=
+  | Var (k : nat)
+  | Const (φ : formula)
+  | Func (φ : formula) (x : term)
+  | BFunc (φ : formula) (x y : term).
 
-Notation "i == j" := (IsEqual i j) (at level 40).
-Notation "i ∈ j" := (ElementOf i j) (at level 40).
+Notation "x == y" := (IsEqual x y) (at level 40).
+Notation "x ∈ y" := (ElementOf x y) (at level 40).
 Notation "¬` φ" := (Negation φ) (at level 50, φ at next level, format "¬` φ").
-Notation "i != j" := (¬`(i = j)) (at level 40).
-Notation "i ∉ j" := (¬`(i ∈ j)) (at level 40).
+Notation "x != y" := (¬`(x = y)) (at level 40).
+Notation "x ∉ y" := (¬`(x ∈ y)) (at level 40).
 Notation "φ ∧` ϕ" := (Conjunction φ ϕ) (at level 60).
 Notation "φ ∨` ϕ" := (¬`(¬`ϕ ∧` ¬`φ)) (at level 60).
 Notation "φ ==> ϕ" := (¬`(φ ∧` ¬`ϕ)) (at level 70).
@@ -32,66 +36,86 @@ Fixpoint closure n φ :=
   | S m => closure m (∀`m[φ])
   end.
 
-(* Compute if there is a free occurence of x in φ. *)
-Fixpoint free x φ :=
-  match φ with
-  | i == j => (i =? x) || (j =? x)
-  | i ∈ j => (i =? x) || (j =? x)
-  | ¬`ϕ => free x ϕ
-  | ϕ ∧` ψ => free x ϕ || free x ψ
-  | ∃`i[ϕ] => if i =? x then false else free x ϕ
+(* Get list of variables in the given term. *)
+Fixpoint vars x :=
+  match x with
+  | Var n => n :: nil
+  | Const _ => nil
+  | Func _ x => vars x
+  | BFunc _ x y => vars x ++ vars y
   end.
 
-(* Compute if y is free in all free occurences of x. *)
-Fixpoint free_at x y φ :=
+(* Compute if there is a free occurence of i in φ. *)
+Fixpoint free i φ :=
   match φ with
-  | i == j => true
-  | i ∈ j => true
-  | ¬`ϕ => free_at x y ϕ
-  | ϕ ∧` ψ => free_at x y ϕ && free_at x y ψ
-  | ∃`i[ϕ] =>
-      if i =? x then true
-      else if i =? y then negb (free x φ)
-      else free_at x y ϕ
+  | x == y => existsb (eqb i) (vars x ++ vars y)
+  | x ∈ y => existsb (eqb i) (vars x ++ vars y)
+  | ¬`ϕ => free i ϕ
+  | ϕ ∧` ψ => free i ϕ || free i ψ
+  | ∃`k[ϕ] => if i =? k then false else free i ϕ
+  end.
+
+(* Compute if j is free in all free occurences of i. *)
+Fixpoint free_at i j φ :=
+  match φ with
+  | x == y => true
+  | x ∈ y => true
+  | ¬`ϕ => free_at i j ϕ
+  | ϕ ∧` ψ => free_at i j ϕ && free_at i j ψ
+  | ∃`k[ϕ] =>
+      if i =? k then true
+      else if j =? k then negb (free i φ)
+      else free_at i j ϕ
   end.
 
 (* Compute largest variable occuring in φ. *)
-Fixpoint max_var φ :=
+Definition lmaxS l := fold_right max 0 (map S l).
+Fixpoint fresh φ :=
   match φ with
-  | i == j => max i j
-  | i ∈ j => max i j
-  | ¬`ϕ => max_var ϕ
-  | ϕ ∧` ψ => max (max_var ϕ) (max_var ψ)
-  | ∃`i[ϕ] => max i (max_var ϕ)
+  | x == y => lmaxS (vars x ++ vars y)
+  | x ∈ y => lmaxS (vars x ++ vars y)
+  | ¬`ϕ => fresh ϕ
+  | ϕ ∧` ψ => max (fresh ϕ) (fresh ψ)
+  | ∃`i[ϕ] => max (S i) (fresh ϕ)
   end.
 
 (* Compute upper bound on the number of free variables. *)
-Fixpoint count_fvar (Γ : nat -> bool) φ :=
-  let f := λ i, if Γ i then 0 else S i in
+Fixpoint count_fvar (fr : nat -> bool) φ :=
   match φ with
-  | i == j => max (f i) (f j)
-  | i ∈ j => max (f i) (f j)
-  | ¬`ϕ => count_fvar Γ ϕ
-  | ϕ ∧` ψ => max (count_fvar Γ ϕ) (count_fvar Γ ψ)
-  | ∃`x[ϕ] => count_fvar (Γ;x:=true) ϕ
+  | x == y => lmaxS (filter fr (vars x ++ vars y))
+  | x ∈ y => lmaxS (filter fr (vars x ++ vars y))
+  | ¬`ϕ => count_fvar fr ϕ
+  | ϕ ∧` ψ => max (count_fvar fr ϕ) (count_fvar fr ψ)
+  | ∃`i[ϕ] => count_fvar (fr;i:=false) ϕ
   end.
 
-(* Replace free occurrences of x with y. *)
-Fixpoint subst x y φ :=
-  match φ with
-  | i == j => (id;x:=y) i == (id;x:=y) j
-  | i ∈ j => (id;x:=y) i ∈ (id;x:=y) j
-  | ¬`ϕ => ¬`subst x y ϕ
-  | ϕ ∧` ψ => subst x y ϕ ∧` subst x y ψ
-  | ∃`i[ϕ] => ∃`i[if i =? x then ϕ else subst x y ϕ]
+(* All free variables in φ. *)
+Definition fvar φ := count_fvar (const true) φ.
+
+(* Replace i with j. *)
+Fixpoint term_subst i j x :=
+  match x with
+  | Var k => Var (if k =? i then j else k)
+  | Const φ => Const φ
+  | Func φ x => Func φ (term_subst i j x)
+  | BFunc φ x y => BFunc φ (term_subst i j x) (term_subst i j y)
   end.
 
-Definition fvar φ := count_fvar (const false) φ.
-Definition fresh φ := S (max_var φ).
+(* Replace free occurrences of i with j. *)
+Fixpoint subst i j φ :=
+  match φ with
+  | x == y => term_subst i j x == term_subst i j y
+  | x ∈ y => term_subst i j x ∈ term_subst i j y
+  | ¬`ϕ => ¬`subst i j ϕ
+  | ϕ ∧` ψ => subst i j ϕ ∧` subst i j ψ
+  | ∃`k[ϕ] => ∃`k[if i =? k then ϕ else subst i j ϕ]
+  end.
 
 Notation "∀^( n )[ φ ]" := (closure n φ) (format "∀^( n )[ φ ]").
 Notation "φ '\[' i := j ]" := (subst i j φ)
   (at level 30, format "φ '\[' i := j ]").
+
+Coercion Var : nat >-> term.
 
 (* Unique existential quantifiction of x for φ = φ(x). *)
 Definition Exists_unique x φ :=
@@ -100,8 +124,8 @@ Definition Exists_unique x φ :=
 
 Notation "∃! x [ φ ]" := (Exists_unique x φ) (format "∃! x [ φ ]").
 
-End Basic_language_of_set_theory.
-Export Basic_language_of_set_theory.
+End Formal_language_of_set_theory.
+Export Formal_language_of_set_theory.
 
 Module Model_definition.
 
@@ -113,6 +137,8 @@ Definition model U : Type := (U -> U -> Prop) * (U -> U -> Prop).
 
 Definition ctx U := nat -> option U.
 Definition Γ0 {U} : ctx U := const None.
+
+Notation "↓ x" := (Some x) (at level 20, format "↓ x").
 
 Section Tarski_truth.
 
@@ -127,21 +153,38 @@ Definition Holds (R : U -> U -> Prop) x y :=
   end.
 
 (* Tarski-truth definition. *)
-Fixpoint Realizes (Γ : ctx U) φ : Prop :=
+Fixpoint Realizes (Γ : ctx U) (φ : formula) : Prop :=
   match φ with
-  | i == j => Holds (fst A) (Γ i) (Γ j)
-  | i ∈ j => Holds (snd A) (Γ i) (Γ j)
+  | Var i == Var j => Holds (fst A) (Γ i) (Γ j)
+  | Var i ∈ Var j => Holds (snd A) (Γ i) (Γ j)
+  | x == y => ∃u v, Materializes Γ x u /\ Materializes Γ y v /\ fst A u v
+  | x ∈ y => ∃u v, Materializes Γ x u /\ Materializes Γ y v /\ snd A u v
   | ¬`ϕ => ¬Realizes Γ ϕ
   | ϕ ∧` ψ => Realizes Γ ϕ /\ Realizes Γ ψ
-  | ∃`x[ϕ] => ∃u, Realizes (set x (Some u) Γ) ϕ
+  | ∃`x[ϕ] => ∃u, Realizes (Γ;x:=↓u) ϕ
+  end
+with Materializes (Γ : ctx U) (z : term) (z' : U) : Prop :=
+  match z with
+  | Var i => Γ i = ↓z'
+  | Const def =>
+    fvar def = 1 /\ (∃!v, Realizes (Γ0;0:=↓v) def) /\
+    Realizes (Γ0;0:=↓z') def
+  | Func def x =>
+    fvar def = 2 /\ (∀u, ∃!v, Realizes (Γ0;0:=↓u;1:=↓v) def)
+    /\ ∃x', Materializes Γ x x' /\
+    Realizes (Γ0;0:=↓x';1:=↓z') def
+  | BFunc def x y =>
+    fvar def = 3 /\ (∀u u', ∃!v, Realizes (Γ0;0:=↓u;1:=u';2:=↓v) def)
+    /\ ∃x' y', Materializes Γ x x' /\ Materializes Γ y y' /\
+    Realizes (Γ0;0:=↓x';1:=↓y';2:=↓z') def
   end.
 
 End Tarski_truth.
 
 Arguments Realizes {_}.
+Arguments Materializes {_}.
 Arguments Γ0 {_}.
 
-Notation "↓ x" := (Some x) (at level 20, format "↓ x").
 Notation "A |= ( φ )[ Γ ]" := (Realizes A Γ φ)
   (at level 75, format "A  |=  ( φ )[ Γ ]").
 Notation "A |= φ" := (A |= (φ)[Γ0]) (at level 75).
@@ -149,75 +192,88 @@ Notation "A |= φ" := (A |= (φ)[Γ0]) (at level 75).
 Definition Logical_consequence (Γ Δ : P formula) :=
   ∀U, ∀A : model U, (∀φ, Γ φ -> A |= φ) -> ∀φ, Δ φ -> A |= φ.
 
-Notation "Γ |- Δ" := (Logical_consequence Γ Δ) (at level 80).
+Notation "Γ ∴ Δ" := (Logical_consequence Γ Δ) (at level 80).
+Notation "∴ Δ" := (∅ ∴ Δ) (at level 80).
 
 End Model_definition.
 Export Model_definition.
 
-Section General_proofs.
-
-Variable U : Type.
-Variable A : model U.
+Module Model_tools.
 
 Section Part_1.
 
+Variable U : Type.
+Variable A : model U.
 Variable Γ : ctx U.
 Variable φ ϕ : formula.
 
-Theorem disj_elim :
-  A |= (φ ∨` ϕ)[Γ] -> A |= (φ)[Γ] \/ A |= (ϕ)[Γ].
-Proof.
-simpl; intros; apply not_and_or in H as [H|H]; apply NNPP in H; auto.
-Qed.
+Theorem neg_elim : A |= (¬`φ)[Γ] -> ¬ A |= (φ)[Γ].
+Proof. easy. Qed.
 
-Theorem disj_intro :
-  A |= (φ)[Γ] \/ A |= (ϕ)[Γ] -> A |= (φ ∨` ϕ)[Γ].
-Proof.
-simpl; intros H [H1 H2]. destruct H; auto.
-Qed.
+Theorem neg_intro : ¬ A |= (φ)[Γ] -> A |= (¬`φ)[Γ].
+Proof. easy. Qed.
 
-Theorem implies_intro :
-  (A |= (φ)[Γ] -> A |= (ϕ)[Γ]) -> A |= (φ ==> ϕ)[Γ].
-Proof.
-simpl; intros H [H1 H2]; apply H2, H, H1.
-Qed.
+Theorem conj_elim : A |= (φ ∧` ϕ)[Γ] -> A |= (φ)[Γ] /\ A |= (ϕ)[Γ].
+Proof. easy. Qed.
 
-Theorem implies_elim :
-  A |= (φ ==> ϕ)[Γ] -> A |= (φ)[Γ] -> A |= (ϕ)[Γ].
-Proof.
-simpl; intros; apply not_and_or in H as [H|H]. easy. now apply NNPP.
-Qed.
+Theorem conj_intro : A |= (φ)[Γ] /\ A |= (ϕ)[Γ] -> A |= (φ ∧` ϕ)[Γ].
+Proof. easy. Qed.
 
-Theorem forall_intro x :
-  (∀u, A |= (φ)[Γ;x:=↓u]) -> A |= (∀`x[φ])[Γ].
-Proof.
-simpl; intros H [u Hu]; apply Hu, H.
-Qed.
+Theorem ex_elim k : A |= (∃`k[φ])[Γ] -> ∃u, A |= (φ)[Γ;k:=↓u].
+Proof. easy. Qed.
 
-Theorem forall_elim x :
-  A |= (∀`x[φ])[Γ] -> ∀u, A |= (φ)[Γ;x:=↓u].
-Proof.
-simpl; intros. eapply not_ex_all_not in H. apply NNPP, H.
-Qed.
+Theorem ex_intro k : (∃u, A |= (φ)[Γ;k:=↓u]) -> A |= (∃`k[φ])[Γ].
+Proof. easy. Qed.
+
+Theorem disj_elim : A |= (φ ∨` ϕ)[Γ] -> A |= (φ)[Γ] \/ A |= (ϕ)[Γ].
+Proof. cbn; intros; apply not_and_or in H as [H|H]; apply NNPP in H; auto. Qed.
+
+Theorem disj_intro : A |= (φ)[Γ] \/ A |= (ϕ)[Γ] -> A |= (φ ∨` ϕ)[Γ].
+Proof. cbn; intros H [H1 H2]. destruct H; auto. Qed.
+
+Theorem implies_intro : (A |= (φ)[Γ] -> A |= (ϕ)[Γ]) -> A |= (φ ==> ϕ)[Γ].
+Proof. cbn; intros H [H1 H2]; apply H2, H, H1. Qed.
+
+Theorem implies_elim : A |= (φ ==> ϕ)[Γ] -> A |= (φ)[Γ] -> A |= (ϕ)[Γ].
+Proof. cbn; intros; apply not_and_or in H as [H|H]. easy. now apply NNPP. Qed.
+
+Theorem forall_intro x : (∀u, A |= (φ)[Γ;x:=↓u]) -> A |= (∀`x[φ])[Γ].
+Proof. cbn; intros H [u Hu]; apply Hu, H. Qed.
+
+Theorem forall_elim x : A |= (∀`x[φ])[Γ] -> ∀u, A |= (φ)[Γ;x:=↓u].
+Proof. cbn; intros. eapply not_ex_all_not in H. apply NNPP, H. Qed.
 
 End Part_1.
 
+Ltac fsplit := try (apply conj_intro; split).
+Ltac fsplit_in H H1 H2 := try (apply conj_elim in H; destruct H as [H1 H2]).
+Ltac fapply H := try (eapply implies_elim; [apply H|]).
+Ltac fintro x := try (apply forall_intro; intro x).
+Ltac fsuppose H := try (apply neg_intro; intro H).
+Ltac fsuppose_ex x H := let H' := fresh in
+  try (apply neg_intro; intro H'; apply ex_elim in H' as [x H]).
+Ltac ftake x H := try (apply ex_intro; intros [x H]).
+Ltac fhyp H := try (apply implies_intro; intro H).
+Ltac fhyp_split H1 H2 := let H := fresh in try (fhyp H; fsplit_in H H1 H2).
+
 Section Part_2.
 
+Variable U : Type.
+Variable A : model U.
 Variable Γ : ctx U.
 Variable φ ϕ : formula.
 
 Theorem iff_intro :
   (A |= (φ)[Γ] <-> A |= (ϕ)[Γ]) -> A |= (φ <=> ϕ)[Γ].
 Proof.
-intros; split; apply implies_intro; intros; now apply H.
+intros; fsplit; fhyp H'; now apply H.
 Qed.
 
 Theorem iff_elim :
   A |= (φ <=> ϕ)[Γ] -> (A |= (φ)[Γ] <-> A |= (ϕ)[Γ]).
 Proof.
-intros [H1 H2]; split; intros; eapply implies_elim.
-apply H1. easy. apply H2. easy.
+intro H; fsplit_in H H1 H2. split; intros.
+now fapply H1. now fapply H2.
 Qed.
 
 Theorem closure_intro n :
@@ -225,7 +281,7 @@ Theorem closure_intro n :
 Proof.
 revert φ; induction n; simpl; intros.
 assert(H' := H Γ0); now rewrite pre_0 in H'.
-apply IHn; intros. apply forall_intro; intros.
+apply IHn; intros. fintro x.
 rewrite set_eq_pre_pre_const, pre_pre1, pre_pre2.
 apply H. lia.
 Qed.
@@ -234,69 +290,95 @@ End Part_2.
 
 Section Part_3.
 
+Variable U : Type.
+Variable A : model U.
 Variable Γ : ctx U.
 Variable φ : formula.
 
-Theorem free_lt_count_fvar bound x :
-  free x φ = true -> bound x = false -> x < count_fvar bound φ.
+Lemma in_lmaxS x l :
+  In x l -> x < lmaxS l.
 Proof.
-revert bound; induction φ; simpl; intros.
-1,2: destruct (i =? x) eqn:I, (j =? x) eqn:J;
-b_Prop; subst; try easy; rewrite H0; lia.
+induction l; simpl; intros. easy.
+destruct H; unfold lmaxS; simpl map; remember (S a) as b; simpl; subst.
+lia. apply IHl in H. unfold lmaxS in H; lia.
+Qed.
+
+Theorem free_lt_count_fvar fr i :
+  fr i = true -> free i φ = true -> i < count_fvar fr φ.
+Proof.
+revert fr; induction φ; simpl; intros.
+1,2: apply existsb_exists in H0 as [j [Hj Heq]]; b_Prop; subst.
+1,2: now apply in_lmaxS, filter_In.
 - auto.
-- b_Prop. apply IHf1 in H0; try easy; lia. apply IHf2 in H0; try easy; lia.
-- destruct (i =? x) eqn:E; try easy; b_Prop.
-  apply IHf. easy. rewrite set_get2. easy. lia.
+- b_Prop. apply IHf1 in H; try easy; lia. apply IHf2 in H; try easy; lia.
+- destruct (i =? k) eqn:E; try easy; b_Prop.
+  apply IHf. rewrite set_get2. easy. lia. easy.
 Qed.
 
 Corollary free_lt_fvar x : free x φ = true -> x < fvar φ.
 Proof. intros; now apply free_lt_count_fvar. Qed.
 
-Theorem count_fvar_le_S_max_var bound :
-  count_fvar bound φ <= S (max_var φ).
+Lemma lmaxS_filter f l :
+  lmaxS (filter f l) <= lmaxS l.
 Proof.
-revert bound; induction φ; simpl; intros.
-1,2: destruct (bound i), (bound j); lia.
-- assert(IH := IHf bound); lia.
-- assert(IH1 := IHf1 bound); assert(IH2 := IHf2 bound); lia.
-- assert(IH := IHf (bound;i:=true)); lia.
+unfold lmaxS; induction l. easy.
+simpl filter; destruct (f a); simpl map.
+all: remember (S a) as b; simpl; subst; lia.
+Qed.
+
+Lemma fresh_ex f k : fresh f <= fresh (∃`k[f]).
+Proof. simpl; destruct (fresh f); lia. Qed.
+
+Theorem count_fvar_le_fresh fr :
+  count_fvar fr φ <= fresh φ.
+Proof.
+revert fr; induction φ; intros.
+1,2: apply lmaxS_filter.
+- simpl; assert(IH := IHf fr); lia.
+- simpl; assert(IH1 := IHf1 fr); assert(IH2 := IHf2 fr); lia.
+- etransitivity. apply IHf. apply fresh_ex.
 Qed.
 
 Corollary fvar_le_fresh : fvar φ <= fresh φ.
-Proof. apply count_fvar_le_S_max_var. Qed.
+Proof. apply count_fvar_le_fresh. Qed.
 
 Theorem fresh_free_at x y :
   y >= fresh φ -> free_at x y φ = true.
 Proof.
-unfold fresh; induction φ; simpl; intros; auto.
-b_Prop. apply IHf1. lia. apply IHf2. lia.
-destruct (i =? x) eqn:X; b_Prop. easy.
-destruct (i =? y) eqn:Y; b_Prop.
-subst; lia. apply IHf; lia.
+induction φ. 1-3: easy.
+simpl; intros; b_Prop.
+apply IHf1; lia. apply IHf2; lia.
+simpl free_at; intros.
+destruct (x =? k) eqn:X; b_Prop. easy.
+destruct (y =? k) eqn:Y; b_Prop; subst.
+simpl in H; destruct (fresh f); lia.
+apply IHf. eapply le_trans. apply fresh_ex. apply H.
 Qed.
 
 Theorem subst_eq x :
   φ\[x:=x] = φ.
 Proof.
-induction φ; simpl. 1,2: unfold set.
+(*induction φ; simpl. 1,2: unfold set.
 1,2: destruct (i =? x) eqn:I, (j =? x) eqn:J; b_Prop; now subst.
 now rewrite IHf. now rewrite IHf1, IHf2. rewrite IHf; now destruct (i =? x).
-Qed.
+Qed.*)
+Admitted.
 
 Theorem subst_not_free_eq x y :
   free x φ = false -> φ\[x:=y] = φ.
 Proof.
-induction φ; simpl; intros; b_Prop.
+(*induction φ; simpl; intros; b_Prop.
 1,2: now rewrite ?set_get2.
 now rewrite IHf. now rewrite IHf1, IHf2.
 destruct (i =? x). easy. now rewrite IHf.
-Qed.
+Qed.*)
+Admitted.
 
 Theorem change_context (Δ : ctx U) :
   (∀x, free x φ = true -> Γ x = Δ x) -> A |= (φ)[Γ] -> A |= (φ)[Δ].
 Proof.
-revert Γ Δ; induction φ; simpl; intros.
-1,2: erewrite <-H, <-H; try easy; now rewrite Nat.eqb_refl, ?orb_true_r.
+(*revert Γ Δ; induction φ; simpl; intros.
+1,2: erewrite <-H, <-H; try easy; now rewrite eqb_refl, ?orb_true_r.
 - intros H'; apply H0.
   eapply IHf. 2: apply H'.
   intros. symmetry; now apply H.
@@ -307,12 +389,15 @@ revert Γ Δ; induction φ; simpl; intros.
   destruct (eq_dec i j). subst; now rewrite ?set_get1.
   rewrite ?set_get2; try lia. apply H.
   now replace (i =? j) with false by b_lia.
-Qed.
+Qed.*)
+Admitted.
 
 End Part_3.
 
 Section Part_4.
 
+Variable U : Type.
+Variable A : model U.
 Variable Γ : ctx U.
 Variable φ : formula.
 
@@ -321,7 +406,7 @@ Theorem subst_set_ctx x y :
   A |= (φ\[x:=y])[Γ] <->
   A |= (φ)[Γ;x:=Γ y].
 Proof.
-revert Γ; induction φ; simpl; intros; split; intros.
+(*revert Γ; induction φ; simpl; intros; split; intros.
 1-4: unfold set in *; destruct (i =? x) eqn:I, (j =? x) eqn:J; b_Prop;
 subst; try rewrite ?set_get1, ?set_get2 in *; now try rewrite H in *.
 1-2: intros H1; now apply H0, IHf.
@@ -344,14 +429,13 @@ all: destruct (i =? x) eqn:I, H0 as [v Hv]; b_Prop; subst; exists v.
     eapply change_context. 2: apply Hv. intros j Hj.
     apply set_get2. intros H'; subst; now rewrite H in Hj.
   + apply IHf. easy. rewrite set_get2. easy. lia.
-Qed.
+Qed.*)
+Admitted.
 
 End Part_4.
 
-End General_proofs.
-
-Ltac intro_var x := apply forall_intro; intro x.
-Ltac intro_hyp H := apply implies_intro; intro H.
+End Model_tools.
+Export Model_tools.
 
 Section Zermelo_Fraenkel_axioms.
 
@@ -435,11 +519,11 @@ End Zermelo_Fraenkel_axioms.
 
 (* Frege's comprehension axiom cannot be realized. *)
 Theorem Russells_paradox :
-  ∃φ, Schema_of_comprehension φ /\ ∅ |- ⦃ ¬`φ ⦄.
+  ∃φ, Schema_of_comprehension φ /\ ∴ ⦃ ¬`φ ⦄.
 Proof.
 exists (Axiom_of_comprehension (0 ∉ 0)); split.
 exists (0 ∉ 0); split. now lazy. easy.
-intros U A _ φ def; rewrite <-def; clear def φ. intros [uv H].
+intros U A _ φ def; rewrite <-def; clear def φ. fsuppose_ex uv H.
 replace (fvar (0 ∉ 0) - 1) with 0 in H by now subst.
 replace (fresh (0 ∉ 0)) with 1 in H by now subst.
 apply forall_elim with (u:=uv), iff_elim in H.
@@ -454,7 +538,7 @@ assert(absurd : A |= (0 ∈ 0)[Γ] <-> A |= (0 ∉ 0)[Γ]).
     replace (Γ 0) with (↓uv). apply H, H0.
     now rewrite HeqΓ, set_get1.
 - assert(A |= (0 ∉ 0)[Γ]).
-  + intros H1; apply absurd in H1 as H2. now apply H2 in H1.
+  + fsuppose H1; apply absurd in H1 as H2. now apply H2 in H1.
   + apply absurd in H0 as H1. now apply H0 in H1.
 Qed.
 
@@ -462,12 +546,11 @@ Qed.
 Theorem realize_equivalence {U} (A : model U) :
   Equivalence (fst A) -> A |= Eq_equivalence.
 Proof.
-intros [R S T]; repeat split.
-- intro_var x; simpl; apply R.
-- intro_var x; intro_var y; intro_hyp H; simpl in *; now apply S.
-- intro_var x; intro_var y; intro_var z.
-  intro_hyp H; destruct H; simpl in *.
-  eapply T. apply H. easy.
+intros [R S T]. fsplit; fsplit.
+- fintro x; apply R.
+- fintro x; fintro y; fhyp H. now apply S.
+- fintro x; fintro y; fintro z; fhyp_split H1 H2.
+  eapply T. apply H1. easy.
 Qed.
 
 (* Some axioms also hold in the ordering of the natural numbers. *)
@@ -478,14 +561,17 @@ Definition NatLt := (@Logic.eq nat, Peano.lt).
 Theorem nat_realizes_extensionality :
   NatLt |= Axiom_of_extensionality.
 Proof.
-intro_var m; intro_var n; intro_hyp H.
+fintro m; fintro n; fhyp H.
 cut(∀i, i < m <-> i < n).
-- simpl. clear H; revert m; induction n; intros.
+- clear H; intros; lazy. revert H; revert m; induction n; intros.
   destruct m. easy. exfalso; assert(H0 := H 0); lia.
   destruct m. exfalso; assert(H0 := H 0); lia.
   apply eq_S, IHn. intros; split; intros; assert(Hi := H (S i)); lia.
-- intros. apply forall_elim with (u:=i) in H. now apply iff_elim in H.
+- intros. now apply forall_elim with (u:=i), iff_elim in H.
 Qed.
+
+(*
+These theorems are outdated.
 
 (* Union gives the predecessor of n. *)
 Theorem nat_realizes_union :
@@ -534,5 +620,6 @@ apply H2m in H; apply H; clear H. eapply subst_set_ctx in H'.
   apply set_get2. apply free_lt_fvar in Hi; lia.
 - apply fresh_free_at; lia.
 Qed.
+*)
 
 End Ordering_of_the_natural_numbers.

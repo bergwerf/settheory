@@ -1,12 +1,13 @@
 (* External imports, general notations, tactics, and some lemmas. *)
 
 (* Convenience *)
-Require Export Lia.          (* Linear Integer Arithmetic tactic *)
-Require Export Utf8.         (* Unicode notations *)
-Require Export Compare_dec.  (* Decidable relations *)
+Require Export Lia.          (* Linear Integer Arithmetic tactic. *)
+Require Export Utf8.         (* Unicode notations. *)
+Require Export Compare_dec.  (* Decidable relations. *)
 
 (* Definitions *)
-Require Export PeanoNat.     (* Peano arithmetic *)
+Require Export PeanoNat.     (* Results from Peano arithmetic. *)
+Require Export List.         (* Lists without list notations. *)
 
 (* Logic *)
 Require Export Classical.
@@ -14,13 +15,14 @@ Require Export ChoiceFacts.
 Require Export ClassicalChoice.
 Require Export PropExtensionality.
 Require Export FunctionalExtensionality.
+Require Export RelationClasses.
+
+(* Import some theorems into the global namespace. Prefer Nat over Bool. *)
+Export Bool.
+Export Nat.
 
 (* Dependent choice. *)
 Axiom DC_fun : ∀A, FunctionalDependentChoice_on A.
-
-(* Import some theorems into the global namespace. *)
-Export Nat.
-Export Bool.
 
 (* Some global notations. *)
 Notation sig1 := proj1_sig.

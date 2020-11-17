@@ -87,7 +87,7 @@ now replace (m + i - m) with i by b_lia.
 Qed.
 
 Lemma set_get1 n x α : set n x α n = x.
-Proof. unfold set; now rewrite Nat.eqb_refl. Qed.
+Proof. unfold set; now rewrite eqb_refl. Qed.
 
 Lemma set_get2 n x α i : i ≠ n -> set n x α i = α i.
 Proof. intros; unfold set; now replace (i =? n) with false by b_lia. Qed.

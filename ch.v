@@ -2,10 +2,6 @@
 
 From set_theory Require Import lib ts fn pair set seq bin d cb.
 
-(* We use lists exclusively for the embedding proof. *)
-Require Import List.
-Import ListNotations.
-
 (*
 First we will see that it is possible to embed the Cantor space into any
 non-empty, perfect subset of the Cantor space (this generalizes to other
@@ -116,11 +112,11 @@ Qed.
 
 (* nth_Cσ is the same as nth_rev of a prefix given by Cσ. *)
 Theorem nth_Cσ_eq_nth_rev m α :
-  Eqn m (nth_Cσ [] α) (nth_rev (Cσ [] α m)).
+  Eqn m (nth_Cσ nil α) (nth_rev (Cσ nil α m)).
 Proof.
 induction m; intros. easy.
 rewrite Cσ_self_extending with (d:=false). intros i Hi.
-assert(Hm : m = length (Cσ [] α m)) by (now rewrite Cσ_length).
+assert(Hm : m = length (Cσ nil α m)) by (now rewrite Cσ_length).
 rewrite Hm in Hi; eapply nth_rev_cases in Hi as [[H1 H2]|[H1 H2]]; rewrite H2.
 apply IHm; now rewrite Hm. rewrite <-Hm in H1; now subst.
 Qed.
@@ -282,7 +278,7 @@ Variable Hσ : ∀s, prefix_LEM s (σ s).
 
 (* X is inhabited. *)
 Theorem σ_nil :
-  σ [] = true.
+  σ nil = true.
 Proof.
 apply not_empty in nonempty_X as [α Hα].
 apply Hσ; now exists α.
@@ -307,8 +303,9 @@ split.
 - (* Pre-continuation *)
   intros [b Hb]. apply Hσ in Hb as [α [H1α H2α]]; apply Hσ; exists α.
   split. easy. intros i Hi. rewrite <-H2α; unfold nth_rev.
-  replace (b :: s) with ([b] ++ s) by easy; rewrite rev_app_distr, app_nth1.
-  easy. now rewrite rev_length. simpl; lia.
+  replace (b :: s) with ((b :: nil) ++ s) by easy.
+  rewrite rev_app_distr, app_nth1. easy.
+  now rewrite rev_length. simpl; lia.
 Qed.
 
 Lemma andb_forall_true f : (∀b, f b = true) -> f false && f true = true.
@@ -331,7 +328,7 @@ remember (i - length s) as n; assert(i = length s + n) by lia.
 rewrite H0 in H1i, H2i; clear H3α H2β H Heqn H0 i i'.
 revert H1α H2α H1i H2i H3β; revert s. induction n; intros.
 - (* We are at the 2-way point. *)
-  exists []; rewrite app_nil_l; rewrite add_0_r in *.
+  exists nil; rewrite app_nil_l; rewrite add_0_r in *.
   apply andb_forall_true with (f:=λ b, σ (b :: s)).
   intros; apply Hσ; simpl. destruct (bool_dec (α (length s)) b).
   + exists α; split. easy. now apply eqn_S_nth_rev.
@@ -342,7 +339,7 @@ revert H1α H2α H1i H2i H3β; revert s. induction n; intros.
   pose(b := α (length s)); pose(t := b :: s).
   assert(length s + S n = length t + n) by (simpl; now rewrite <-add_succ_r).
   rewrite H in H1i, H2i. apply IHn in H2i as [t' Ht']; try easy.
-  exists (t' ++ [b]); now rewrite <-app_assoc.
+  exists (t' ++ b :: nil); now rewrite <-app_assoc.
   unfold t; simpl. now apply eqn_S_nth_rev.
 Qed.
 
@@ -356,7 +353,7 @@ destruct (unique_choice _ _ _ prefix_LEM_classic) as [σ Hσ].
 assert(σ_nil := σ_nil σ Hσ);
 assert(σ_cont := σ_cont σ Hσ);
 assert(σ_split := σ_split σ Hσ).
-exists (nth_Cσ σ []); split.
+exists (nth_Cσ σ nil); split.
 - (* Dom ⊆ X *)
   intros; apply closed_X; intros m.
   apply Cσ_accepted with (α:=α)(n:=m) in σ_nil as Hm. 2: easy.
@@ -364,7 +361,7 @@ exists (nth_Cσ σ []); split.
   apply Hσ in Hm as [β [H1β H2β]]. apply perfect_X in H1β as H3β.
   rewrite Cσ_length in H2β; simpl in H2β.
   destruct (H3β m) as [γ [H1γ [H2γ H3γ]]].
-  destruct (classic (nth_Cσ σ [] α = β)).
+  destruct (classic (nth_Cσ σ nil α = β)).
   + exists γ; repeat split. now rewrite H.
     eapply eqn_trans. now apply nth_Cσ_eq_nth_rev.
     eapply eqn_trans. apply H2β.
@@ -374,7 +371,7 @@ exists (nth_Cσ σ []); split.
     easy. easy.
 - (* Injective *)
   intros α1 α2; apply classic_contra; intros. apply seq_neq in H as [i Hi].
-  apply nth_Cσ_inj with (σ:=σ)(s:=[]) in Hi as [n Hn].
+  apply nth_Cσ_inj with (σ:=σ)(s:=nil) in Hi as [n Hn].
   apply seq_neq; now exists n. all: easy.
 Qed.
 
