@@ -20,7 +20,7 @@ with term :=
 Notation "x == y" := (IsEqual x y) (at level 40).
 Notation "x ∈ y" := (ElementOf x y) (at level 40).
 Notation "¬` φ" := (Negation φ) (at level 50, φ at next level, format "¬` φ").
-Notation "x != y" := (¬`(x = y)) (at level 40).
+Notation "x != y" := (¬`(x == y)) (at level 40).
 Notation "x ∉ y" := (¬`(x ∈ y)) (at level 40).
 Notation "φ ∧` ϕ" := (Conjunction φ ϕ) (at level 60).
 Notation "φ ∨` ϕ" := (¬`(¬`ϕ ∧` ¬`φ)) (at level 60).
