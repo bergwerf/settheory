@@ -151,7 +151,6 @@ Definition Logical_consequence (Γ Δ : P formula) :=
   ∀U, ∀A : model U, (∀φ, Γ φ -> A |= φ) -> ∀φ, Δ φ -> A |= φ.
 
 Notation "Γ ∴ Δ" := (Logical_consequence Γ Δ) (at level 80).
-Notation "∴ Δ" := (∅ ∴ Δ) (at level 80).
 
 End Model_definition.
 Export Model_definition.
@@ -462,7 +461,7 @@ Qed.
 
 (* Frege's comprehension axiom cannot be realized. *)
 Theorem Russells_paradox :
-  ∃φ, Schema_of_comprehension φ /\ ∴ ⦃ ¬`φ ⦄.
+  ∃φ, Schema_of_comprehension φ /\ ∅ ∴ ⦃ ¬`φ ⦄.
 Proof.
 exists (Axiom_of_comprehension (0 ∉ 0)); split.
 exists (0 ∉ 0); split. now lazy. easy.
