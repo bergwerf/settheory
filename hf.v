@@ -75,15 +75,12 @@ unfold hf_eq; repeat split.
   2,4: apply H. all: now apply IH with (y:=y).
 Qed.
 
-(*
-These theorems are outdated.
-
 Theorem hf_realizes_pairing :
   HF |= Axiom_of_pairing.
 Proof.
-intro_var x; intro_var y.
-pose(p := ⟨x :: y :: nil⟩); exists p.
-intro_var z; apply iff_intro; split; intros.
+fintro x; fintro y.
+pose(p := HFSet (x :: y :: nil)); exists p.
+fintro z; apply iff_intro; split; intros.
 - apply disj_intro; simpl in H.
   unfold hf_in, hf_inb in H; simpl in H.
   b_Prop; try easy; simpl; auto.
@@ -114,14 +111,13 @@ Proof.
 intros [φ [Hϕ def]]; subst; unfold Axiom_of_specification.
 remember (fvar φ - 1) as x; remember (fresh φ) as a; remember (S a) as b.
 apply closure_intro; intros; remember (pre x Δ Γ0) as Γ.
-intro_var a'; destruct a' as [a'].
+fintro a'; destruct a' as [a'].
 pose(spec e := HF |= (φ)[Γ;x:=↓e]).
 destruct (list_specification a' spec) as [b' Hb'].
-exists ⟨b'⟩; intro_var e; apply iff_intro; split; intros.
+exists (HFSet b'); fintro e; apply iff_intro; split; intros.
 Abort.
 
 Theorem hf_realizes_zf_finite φ :
   ZF_finite φ -> HF |= φ.
 Proof.
 Abort.
-*)
