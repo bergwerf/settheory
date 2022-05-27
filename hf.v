@@ -46,7 +46,7 @@ Definition hf_eq x y := hf_eqb x y = true.
 Definition hf_in x y := hf_inb x y = true.
 Definition HF : model hf := (hf_eq, hf_in).
 
-Instance hf_eq_equivalence :
+Global Instance hf_eq_equivalence :
   Equivalence hf_eq.
 Proof.
 unfold hf_eq; repeat split.
